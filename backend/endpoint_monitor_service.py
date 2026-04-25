@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
@@ -14,6 +15,8 @@ from endpoint_monitor import (
     window_start_24h,
 )
 from monitor_alert_email import resolve_alert_recipient, send_sla_downtime_email
+
+log = logging.getLogger(__name__)
 
 
 def _i_ok(v: Any) -> int:
@@ -31,6 +34,19 @@ def _i_enabled(ep: dict[str, Any]) -> bool:
     return int(e) == 1
 
 
+# Serialize monitor runs per user so concurrent API + background snapshot do not race
+# on consecutive_failures (which blocked cfail from ever reaching failure_threshold).
+_user_ep_locks: dict[str, asyncio.Lock] = {}
+_ep_locks_init = asyncio.Lock()
+
+
+async def _acquire_user_ep_lock(user_id: str) -> asyncio.Lock:
+    async with _ep_locks_init:
+        if user_id not in _user_ep_locks:
+            _user_ep_locks[user_id] = asyncio.Lock()
+        return _user_ep_locks[user_id]
+
+
 async def run_endpoint_monitors(
     st: Any, user_id: str
 ) -> dict[str, Any]:
@@ -41,7 +57,14 @@ async def run_endpoint_monitors(
             "endpoints": [],
             "alerts": [],
         }
+    lock = await _acquire_user_ep_lock(user_id)
+    async with lock:
+        return await _run_endpoint_monitors_locked(st, user_id)
 
+
+async def _run_endpoint_monitors_locked(
+    st: Any, user_id: str
+) -> dict[str, Any]:
     eps = st.list_monitored_endpoints(user_id)
     if not eps:
         return {
@@ -173,16 +196,19 @@ async def run_endpoint_monitors(
                 to_addr = resolve_alert_recipient(ep, settings)
                 err_v = chk.get("error")
                 err_out: str | None = None if err_v in (None, "") else str(err_v)
-                await asyncio.to_thread(
-                    send_sla_downtime_email,
-                    to_addr,
-                    endpoint_name=str(ep.get("name") or eid),
-                    url=u,
-                    status_code=chk.get("status_code"),
-                    error=err_out,
-                    failure_threshold=fail_thr,
-                    consecutive_failures=cfail,
-                )
+                try:
+                    await asyncio.to_thread(
+                        send_sla_downtime_email,
+                        to_addr,
+                        endpoint_name=str(ep.get("name") or eid),
+                        url=u,
+                        status_code=chk.get("status_code"),
+                        error=err_out,
+                        failure_threshold=fail_thr,
+                        consecutive_failures=cfail,
+                    )
+                except Exception:
+                    log.exception("SLA email task failed (endpoint_id=%s)", eid)
 
             hist = st.history_for_uptime(user_id, eid, since_24h)
             up_pct = compute_uptime_pct(

@@ -66,6 +66,9 @@ class Settings(BaseModel):
     # When SMTP is unavailable: Resend (HTTPS) and/or public FormSubmit relay (HTTPS)
     resend_api_key: str = ""
     resend_from: str = "onboarding@resend.dev"
+    # If set, all channels deliver to this address (Resend sandbox / unverified domain fix).
+    # The intended recipient (endpoint or DEFAULT_MONITOR_ALERT_EMAIL) is still shown in the body.
+    alert_delivery_to_override: str = ""
     # POST to formsubmit.co/ajax/{recipient} — no key; may require one-time email activation per inbox
     formsubmit_fallback: bool = True
 
@@ -125,6 +128,7 @@ def get_settings() -> Settings:
     d["smtp_from"] = (os.getenv("SMTP_FROM", "") or "").strip()
     d["resend_api_key"] = (os.getenv("RESEND_API_KEY", "") or "").strip()
     d["resend_from"] = (os.getenv("RESEND_FROM", "onboarding@resend.dev") or "").strip()
+    d["alert_delivery_to_override"] = (os.getenv("ALERT_DELIVERY_TO_OVERRIDE", "") or "").strip()
     d["formsubmit_fallback"] = _b("USE_FORM_SUBMIT_EMAIL_FALLBACK", True)
     return Settings.model_validate(d)
 

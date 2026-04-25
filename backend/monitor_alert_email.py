@@ -58,7 +58,7 @@ def _build_sla_message(
 
 def _send_via_smtp(
     s: Settings,
-    to_addr: str,
+    deliver_to: str,
     subj: str,
     body: str,
 ) -> bool:
@@ -66,11 +66,11 @@ def _send_via_smtp(
         return False
     host = _smtp_effective_host(s)
     port = int(s.smtp_port or 587)
-    from_addr = (s.smtp_from or s.smtp_user or to_addr).strip()
+    from_addr = (s.smtp_from or s.smtp_user or deliver_to).strip()
     msg = EmailMessage()
     msg["Subject"] = subj
     msg["From"] = from_addr
-    msg["To"] = to_addr
+    msg["To"] = deliver_to
     msg.set_content(body)
     try:
         with smtplib.SMTP(host, port, timeout=20) as smtp:
@@ -79,16 +79,16 @@ def _send_via_smtp(
             smtp.ehlo()
             smtp.login(s.smtp_user, s.smtp_password)
             smtp.send_message(msg)
-        log.info("SLA downtime email sent via SMTP to %s", to_addr)
+        log.info("SLA downtime email sent via SMTP to %s", deliver_to)
         return True
     except Exception:
-        log.exception("SLA email SMTP failed (to=%s); trying fallbacks if enabled", to_addr)
+        log.exception("SLA email SMTP failed (to=%s); trying fallbacks if enabled", deliver_to)
         return False
 
 
 def _send_via_resend(
     s: Settings,
-    to_addr: str,
+    deliver_to: str,
     subj: str,
     body: str,
 ) -> bool:
@@ -102,24 +102,24 @@ def _send_via_resend(
             headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
             json={
                 "from": from_addr,
-                "to": [to_addr],
+                "to": [deliver_to],
                 "subject": subj,
                 "text": body,
             },
             timeout=30.0,
         )
         if r.is_success:
-            log.info("SLA downtime email sent via Resend to %s", to_addr)
+            log.info("SLA downtime email sent via Resend to %s", deliver_to)
             return True
         log.warning("Resend error %s: %s", r.status_code, (r.text or "")[:500])
     except Exception:
-        log.exception("Resend request failed; trying next fallback (to=%s)", to_addr)
+        log.exception("Resend request failed; trying next fallback (to=%s)", deliver_to)
     return False
 
 
 def _send_via_formsubmit(
     s: Settings,
-    to_addr: str,
+    deliver_to: str,
     subj: str,
     body: str,
 ) -> bool:
@@ -128,7 +128,7 @@ def _send_via_formsubmit(
     # Public relay: no API key. Recipient is in the path. First use may need inbox confirmation
     # (see https://formsubmit.co/documentation). _captcha=false for server-to-server.
     try:
-        enc = quote(to_addr, safe="")
+        enc = quote(deliver_to, safe="")
         r = httpx.post(
             f"https://formsubmit.co/ajax/{enc}",
             data={
@@ -140,11 +140,11 @@ def _send_via_formsubmit(
             timeout=35.0,
         )
         if 200 <= r.status_code < 300:
-            log.info("SLA downtime email submitted via FormSubmit to %s", to_addr)
+            log.info("SLA downtime email submitted via FormSubmit to %s", deliver_to)
             return True
         log.warning("FormSubmit error %s: %s", r.status_code, (r.text or "")[:500])
     except Exception:
-        log.exception("FormSubmit request failed (to=%s)", to_addr)
+        log.exception("FormSubmit request failed (to=%s)", deliver_to)
     return False
 
 
@@ -160,8 +160,8 @@ def send_sla_downtime_email(
 ) -> bool:
     """Send a single notification. Tries SMTP, then Resend, then FormSubmit. Returns True if one path succeeded."""
     s = get_settings()
-    to_addr = (to_addr or "").strip()
-    if not to_addr:
+    logical = (to_addr or "").strip()
+    if not logical:
         log.warning("SLA email skipped: no recipient (set alert_email or DEFAULT_MONITOR_ALERT_EMAIL)")
         return False
     subj, body = _build_sla_message(
@@ -173,23 +173,34 @@ def send_sla_downtime_email(
         failure_threshold,
         consecutive_failures,
     )
+    override = (s.alert_delivery_to_override or "").strip()
+    deliver_to = override or logical
+    if override and override != logical:
+        body = (
+            f"{body}\n\n"
+            f"---\n"
+            f"Logical alert recipient (endpoint / default): {logical}\n"
+            f"Delivery override active (ALERT_DELIVERY_TO_OVERRIDE).\n"
+        )
+        log.info("Alert email delivery override: sending to %s (logical=%s)", deliver_to, logical)
 
-    if _send_via_smtp(s, to_addr, subj, body):
+    if _send_via_smtp(s, deliver_to, subj, body):
         return True
-    if _send_via_resend(s, to_addr, subj, body):
+    if _send_via_resend(s, deliver_to, subj, body):
         return True
-    if _send_via_formsubmit(s, to_addr, subj, body):
+    if _send_via_formsubmit(s, deliver_to, subj, body):
         return True
 
     if smtp_configured(s):
         log.error(
-            "SLA email: SMTP configured but send failed, and other channels did not succeed (to=%s)",
-            to_addr,
+            "SLA email: SMTP configured but send failed, and other channels did not succeed (deliver_to=%s)",
+            deliver_to,
         )
     else:
         log.warning(
-            "SLA email not sent (to=%s). Optional: set RESEND_API_KEY, or keep "
-            "USE_FORM_SUBMIT_EMAIL_FALLBACK=1 and ensure FormSubmit is not blocking this recipient.",
-            to_addr,
+            "SLA email not sent (deliver_to=%s, logical=%s). Set RESEND_API_KEY, optional "
+            "ALERT_DELIVERY_TO_OVERRIDE=your-resend-inbox, or USE_FORM_SUBMIT_EMAIL_FALLBACK=1.",
+            deliver_to,
+            logical,
         )
     return False
