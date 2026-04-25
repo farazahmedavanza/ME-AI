@@ -14,6 +14,7 @@ import { LogUpload } from "@/components/log-upload";
 import { SessionPicker } from "@/components/session-picker";
 import { AddWidgetButton } from "@/components/add-widget-dialog";
 import { ToastBar } from "@/components/toast-bar";
+import { LiveMonitoringWidget } from "@/components/live-monitoring-widget";
 import { apiGet, getHealth } from "@/lib/api";
 
 type DashboardPayload = {
@@ -163,6 +164,7 @@ export function DashboardClient() {
           currentSessionId={sessionId}
           onSessionChange={onSessionChange}
         />
+        <LiveMonitoringWidget autoRefresh refreshMs={30_000} />
         <p className="text-slate-400">
           No log session yet. Start the API and wait for seed, or upload JSON.
         </p>
@@ -236,6 +238,7 @@ export function DashboardClient() {
       </header>
 
       <KpiRow kpis={dash.data.kpis} />
+      <LiveMonitoringWidget autoRefresh={auto} refreshMs={30_000} />
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2" id="apis">
         <div id="sla">
           <HealthOverviewTable rows={dash.data.endpoints} />

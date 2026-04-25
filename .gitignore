@@ -4,6 +4,7 @@ backend/__pycache__/
 backend/**/__pycache__/
 backend/.env
 backend/local_store.db
+backend/data/live_monitor_snapshot.json
 *.pyc
 
 # Node

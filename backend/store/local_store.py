@@ -411,6 +411,80 @@ class LocalStore:
             finally:
                 c.close()
 
+    def list_distinct_monitored_endpoint_user_ids(self) -> list[str]:
+        c = self._connect()
+        try:
+            cur = c.execute(
+                "SELECT DISTINCT user_id FROM monitored_endpoints ORDER BY user_id"
+            )
+            return [str(r[0]) for r in cur.fetchall() if r[0]]
+        finally:
+            c.close()
+
+    def insert_monitored_endpoint(
+        self, user_id: str, fields: dict[str, Any]
+    ) -> str:
+        eid = new_id()
+        with self._lock:
+            c = self._connect()
+            try:
+                c.execute(
+                    "INSERT INTO monitored_endpoints (id, user_id, name, url, method, "
+                    "expected_status_min, expected_status_max, timeout_ms, enabled, "
+                    "sla_max_latency_ms, sla_min_uptime_pct, failure_threshold, webhook_url) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (
+                        eid,
+                        user_id,
+                        fields["name"],
+                        fields["url"],
+                        fields.get("method") or "GET",
+                        int(fields.get("expected_status_min", 200)),
+                        int(fields.get("expected_status_max", 299)),
+                        int(fields.get("timeout_ms", 10_000)),
+                        int(fields.get("enabled", 1)),
+                        int(fields.get("sla_max_latency_ms", 3000)),
+                        float(fields.get("sla_min_uptime_pct", 99.0)),
+                        int(fields.get("failure_threshold", 2)),
+                        fields.get("webhook_url"),
+                    ),
+                )
+                c.commit()
+            finally:
+                c.close()
+        return eid
+
+    def delete_monitored_endpoint(self, user_id: str, endpoint_id: str) -> bool:
+        with self._lock:
+            c = self._connect()
+            try:
+                cur = c.execute(
+                    "SELECT 1 FROM monitored_endpoints WHERE id = ? AND user_id = ?",
+                    (endpoint_id, user_id),
+                )
+                if not cur.fetchone():
+                    return False
+                c.execute(
+                    "DELETE FROM endpoint_check_history WHERE user_id = ? AND endpoint_id = ?",
+                    (user_id, endpoint_id),
+                )
+                c.execute(
+                    "DELETE FROM endpoint_monitor_state WHERE user_id = ? AND endpoint_id = ?",
+                    (user_id, endpoint_id),
+                )
+                c.execute(
+                    "DELETE FROM endpoint_monitor_alerts WHERE user_id = ? AND endpoint_id = ?",
+                    (user_id, endpoint_id),
+                )
+                c.execute(
+                    "DELETE FROM monitored_endpoints WHERE id = ? AND user_id = ?",
+                    (endpoint_id, user_id),
+                )
+                c.commit()
+                return True
+            finally:
+                c.close()
+
     def list_monitored_endpoints(self, user_id: str) -> list[dict[str, Any]]:
         self._seed_monitors_if_empty(user_id)
         c = self._connect()

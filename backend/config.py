@@ -46,6 +46,14 @@ class Settings(BaseModel):
         default_factory=lambda: Path(__file__).resolve().parent / "local_store.db"
     )
 
+    # Background JSON snapshot for dashboard overview (see live_monitor_snapshot.py)
+    live_monitor_snapshot_interval_sec: int = 420
+    live_monitor_snapshot_path: Path = Field(
+        default_factory=lambda: Path(__file__).resolve().parent
+        / "data"
+        / "live_monitor_snapshot.json"
+    )
+
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     class Config:
@@ -84,6 +92,14 @@ def get_settings() -> Settings:
         "cors_origins": os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"),
     }
     d["local_db_path"] = _p("LOCAL_DB_PATH", Path(__file__).resolve().parent / "local_store.db")
+    d["live_monitor_snapshot_interval_sec"] = max(
+        60,
+        int(os.getenv("LIVE_MONITOR_SNAPSHOT_INTERVAL_SEC", "420")),
+    )
+    d["live_monitor_snapshot_path"] = _p(
+        "LIVE_MONITOR_SNAPSHOT_PATH",
+        Path(__file__).resolve().parent / "data" / "live_monitor_snapshot.json",
+    )
     return Settings.model_validate(d)
 
 

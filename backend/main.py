@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
+from contextlib import asynccontextmanager
 
 try:
     from dotenv import load_dotenv
@@ -25,6 +27,7 @@ from endpoint_monitor_service import (
     run_endpoint_monitors,
     snapshot_endpoint_monitors,
 )
+from live_monitor_snapshot import read_snapshot_file, snapshot_background_loop
 from models import (
     DevLoginResponse,
     HealthResponse,
@@ -40,9 +43,27 @@ from store.supabase_store import SupabaseStore
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
-app = FastAPI(title="API Health & SLA Monitor", version="0.1.0")
-
 _settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    stop = asyncio.Event()
+    task = asyncio.create_task(snapshot_background_loop(stop))
+    yield
+    stop.set()
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+
+app = FastAPI(
+    title="API Health & SLA Monitor",
+    version="0.1.0",
+    lifespan=lifespan,
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_settings.cors_list,
@@ -320,6 +341,20 @@ class MonitorEndpointPatch(BaseModel):
     webhook_url: str | None = None
 
 
+class MonitorEndpointCreate(BaseModel):
+    name: str = Field(..., min_length=1)
+    url: str = Field(..., min_length=1)
+    method: str = "GET"
+    expected_status_min: int = 200
+    expected_status_max: int = 299
+    timeout_ms: int = 10_000
+    enabled: bool | int = True
+    sla_max_latency_ms: int = 3000
+    sla_min_uptime_pct: float = 99.0
+    failure_threshold: int = 2
+    webhook_url: str | None = None
+
+
 class MonitorAlertPatch(BaseModel):
     resolution_status: str | None = None
 
@@ -333,6 +368,59 @@ async def endpoint_monitors(
     if refresh:
         return await run_endpoint_monitors(st, user_id)
     return snapshot_endpoint_monitors(st, user_id)
+
+
+@app.get("/api/live-monitoring/snapshot")
+def live_monitoring_snapshot(user_id: Annotated[str, Depends(get_user_id)]):
+    raw = read_snapshot_file()
+    if not raw:
+        raise HTTPException(404, "No snapshot yet")
+    by_user = raw.get("by_user") or {}
+    snap = by_user.get(user_id)
+    if snap is None:
+        raise HTTPException(404, "No snapshot for this user yet")
+    return snap
+
+
+@app.post("/api/endpoint-monitors")
+def create_monitored_endpoint(
+    body: MonitorEndpointCreate,
+    user_id: Annotated[str, Depends(get_user_id)],
+):
+    st = _store()
+    if not hasattr(st, "insert_monitored_endpoint"):
+        raise HTTPException(501, "Endpoint monitor not available for this store")
+    en = body.enabled
+    enabled_i = 1 if (en is True or en == 1) else 0
+    fields = {
+        "name": body.name.strip(),
+        "url": body.url.strip(),
+        "method": (body.method or "GET").upper(),
+        "expected_status_min": body.expected_status_min,
+        "expected_status_max": body.expected_status_max,
+        "timeout_ms": body.timeout_ms,
+        "enabled": enabled_i,
+        "sla_max_latency_ms": body.sla_max_latency_ms,
+        "sla_min_uptime_pct": body.sla_min_uptime_pct,
+        "failure_threshold": body.failure_threshold,
+        "webhook_url": body.webhook_url,
+    }
+    eid = st.insert_monitored_endpoint(user_id, fields)
+    return {"ok": True, "id": eid}
+
+
+@app.delete("/api/endpoint-monitors/{endpoint_id}")
+def delete_monitored_endpoint_route(
+    endpoint_id: str,
+    user_id: Annotated[str, Depends(get_user_id)],
+):
+    st = _store()
+    if not hasattr(st, "delete_monitored_endpoint"):
+        raise HTTPException(501, "Endpoint monitor not available for this store")
+    ok = st.delete_monitored_endpoint(user_id, endpoint_id)
+    if not ok:
+        raise HTTPException(404, "Endpoint not found")
+    return {"ok": True}
 
 
 @app.patch("/api/endpoint-monitors/{endpoint_id}")

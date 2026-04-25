@@ -52,7 +52,7 @@ create table if not exists alerts (
 create index if not exists idx_api_logs_session on api_logs(session_id);
 create index if not exists idx_alerts_session on alerts(session_id);
 
--- HTTP endpoint configuration & live monitor (used by /api/endpoint-monitors; backend uses service role)
+-- HTTP endpoint configuration & live monitor (CRUD via /api/endpoint-monitors; backend uses service role)
 create table if not exists monitored_endpoints (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,

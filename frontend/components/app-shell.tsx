@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 
 const nav = [
   { href: "/dashboard", label: "Overview" },
-  { href: "/configure-endpoints", label: "Configure endpoints" },
+  { href: "/live-monitoring", label: "Live Monitoring" },
   { href: "/upload", label: "Upload logs" },
   { href: "/dashboard#apis", label: "APIs" },
   { href: "/dashboard#alerts", label: "Alerts" },
@@ -34,7 +34,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             const base = n.href.split("#")[0];
             const active =
               path === n.href ||
-              (path === base && n.label === "Overview" && base === "/dashboard");
+              (path === base && n.label === "Overview" && base === "/dashboard") ||
+              (n.label === "Live Monitoring" &&
+                (path === "/live-monitoring" || path === "/configure-endpoints"));
             return (
             <Link
               key={n.href}

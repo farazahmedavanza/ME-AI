@@ -65,6 +65,23 @@ export async function apiPatch(path: string, body: unknown) {
   });
 }
 
+export async function apiDelete(path: string) {
+  let tok = getToken();
+  if (!tok) tok = await fetchToken();
+  let r = await fetch(`${API_BASE}${path}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${tok}` },
+  });
+  if (r.status === 401) {
+    tok = await fetchToken();
+    r = await fetch(`${API_BASE}${path}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${tok}` },
+    });
+  }
+  return r;
+}
+
 export function apiBase() {
   return API_BASE;
 }
@@ -96,6 +113,10 @@ export type MonitoredEndpointView = {
   url: string;
   method: string;
   enabled: boolean;
+  expected_status_min?: number;
+  expected_status_max?: number;
+  timeout_ms?: number;
+  webhook_url?: string | null;
   last_check: {
     ok: boolean;
     status_code: number | null;
@@ -157,4 +178,65 @@ export async function patchEndpointMonitorAlert(id: string) {
   return apiPatch(`/api/endpoint-monitors/monitor-alerts/${id}`, {
     resolution_status: "resolved",
   });
+}
+
+export type LiveMonitoringSnapshotKpis = {
+  pct_up: number | null;
+  breach_count: number;
+  total_endpoints: number;
+  enabled_count: number;
+};
+
+export type LiveMonitoringSnapshotEndpoint = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  ok: boolean | null;
+  status_code: number | null;
+  latency_ms: number | null;
+  checked_at: string | null;
+  sla_breached: boolean | null;
+};
+
+export type LiveMonitoringSnapshot = {
+  exported_at: string;
+  last_run_at?: string | null;
+  check_window_hours?: number;
+  endpoints: LiveMonitoringSnapshotEndpoint[];
+  open_alerts_count: number;
+  recent_alerts_count: number;
+  kpis: LiveMonitoringSnapshotKpis;
+  overall_health: string;
+};
+
+export async function getLiveMonitoringSnapshot(): Promise<LiveMonitoringSnapshot | null> {
+  const r = await apiGet("/api/live-monitoring/snapshot");
+  if (r.status === 404) return null;
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(t || r.statusText);
+  }
+  return r.json() as Promise<LiveMonitoringSnapshot>;
+}
+
+export type MonitorEndpointWriteBody = {
+  name: string;
+  url: string;
+  method?: string;
+  expected_status_min?: number;
+  expected_status_max?: number;
+  timeout_ms?: number;
+  enabled?: boolean | number;
+  sla_max_latency_ms?: number;
+  sla_min_uptime_pct?: number;
+  failure_threshold?: number;
+  webhook_url?: string | null;
+};
+
+export async function postMonitoredEndpoint(body: MonitorEndpointWriteBody) {
+  return apiPost("/api/endpoint-monitors", body);
+}
+
+export async function deleteMonitoredEndpoint(id: string) {
+  return apiDelete(`/api/endpoint-monitors/${id}`);
 }

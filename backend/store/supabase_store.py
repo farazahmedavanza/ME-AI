@@ -235,6 +235,63 @@ class SupabaseStore:
 
     # --- External HTTP endpoint monitor ---
 
+    def list_distinct_monitored_endpoint_user_ids(self) -> list[str]:
+        r = (
+            self._client.table("monitored_endpoints")
+            .select("user_id")
+            .execute()
+        )
+        seen: set[str] = set()
+        out: list[str] = []
+        for row in r.data or []:
+            uid = str(row.get("user_id") or "")
+            if uid and uid not in seen:
+                seen.add(uid)
+                out.append(uid)
+        out.sort()
+        return out
+
+    def insert_monitored_endpoint(
+        self, user_id: str, fields: dict[str, Any]
+    ) -> str:
+        eid = new_id()
+        en = fields.get("enabled", True)
+        enabled_b = en if isinstance(en, bool) else bool(int(en))
+        self._client.table("monitored_endpoints").insert(
+            {
+                "id": eid,
+                "user_id": user_id,
+                "name": fields["name"],
+                "url": fields["url"],
+                "method": fields.get("method") or "GET",
+                "expected_status_min": int(fields.get("expected_status_min", 200)),
+                "expected_status_max": int(fields.get("expected_status_max", 299)),
+                "timeout_ms": int(fields.get("timeout_ms", 10_000)),
+                "enabled": enabled_b,
+                "sla_max_latency_ms": int(fields.get("sla_max_latency_ms", 3000)),
+                "sla_min_uptime_pct": float(fields.get("sla_min_uptime_pct", 99.0)),
+                "failure_threshold": int(fields.get("failure_threshold", 2)),
+                "webhook_url": fields.get("webhook_url"),
+            }
+        ).execute()
+        return eid
+
+    def delete_monitored_endpoint(self, user_id: str, endpoint_id: str) -> bool:
+        chk = (
+            self._client.table("monitored_endpoints")
+            .select("id")
+            .eq("id", endpoint_id)
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+        if not chk.data:
+            return False
+        self._client.table("monitored_endpoints").delete().eq("id", endpoint_id).eq(
+            "user_id", user_id
+        ).execute()
+        return True
+
     def _seed_monitors_if_empty(self, user_id: str) -> None:
         from endpoint_monitor import DEFAULT_MONITORED
 

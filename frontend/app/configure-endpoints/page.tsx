@@ -1,16 +1,5 @@
-import { Suspense } from "react";
-import { ConfigureEndpointsClient } from "@/components/configure-endpoints-client";
+import { redirect } from "next/navigation";
 
-export default function ConfigureEndpointsPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="text-slate-500">
-          <p>Loading…</p>
-        </div>
-      }
-    >
-      <ConfigureEndpointsClient />
-    </Suspense>
-  );
+export default function ConfigureEndpointsRedirectPage() {
+  redirect("/live-monitoring");
 }
