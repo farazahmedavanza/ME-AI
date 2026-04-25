@@ -27,7 +27,11 @@ from endpoint_monitor_service import (
     run_endpoint_monitors,
     snapshot_endpoint_monitors,
 )
-from live_monitor_snapshot import read_snapshot_file, snapshot_background_loop
+from live_monitor_snapshot import (
+    read_snapshot_file,
+    snapshot_background_loop,
+    synthetic_api_logs_from_stored_snapshot,
+)
 from models import (
     DevLoginResponse,
     HealthResponse,
@@ -380,6 +384,22 @@ def live_monitoring_snapshot(user_id: Annotated[str, Depends(get_user_id)]):
     if snap is None:
         raise HTTPException(404, "No snapshot for this user yet")
     return snap
+
+
+@app.get("/api/live-monitoring/logs-export")
+def live_monitoring_logs_export(user_id: Annotated[str, Depends(get_user_id)]):
+    """JSON array of synthetic API log rows (same shape as api_logs.json) for Overview upload."""
+    raw = read_snapshot_file()
+    if not raw:
+        raise HTTPException(404, "No snapshot yet")
+    by_user = raw.get("by_user") or {}
+    snap = by_user.get(user_id)
+    if snap is None:
+        raise HTTPException(404, "No snapshot for this user yet")
+    logs = synthetic_api_logs_from_stored_snapshot(snap)
+    if not logs:
+        raise HTTPException(404, "No log rows in snapshot (open Live Monitoring first)")
+    return logs
 
 
 @app.post("/api/endpoint-monitors")

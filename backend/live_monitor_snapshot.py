@@ -9,6 +9,7 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from config import get_settings
 from endpoint_monitor_service import run_endpoint_monitors
@@ -55,6 +56,103 @@ def atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
                 pass
 
 
+def build_synthetic_api_logs(monitors_payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Rows compatible with /api/upload-logs and analytics (api_logs.json shape)."""
+    checked_at_fallback = monitors_payload.get("checked_at") or datetime.now(
+        timezone.utc
+    ).isoformat()
+    rows: list[dict[str, Any]] = []
+    for e in monitors_payload.get("endpoints") or []:
+        eid = str(e.get("id") or uuid4())
+        name = str(e.get("name") or "monitor")
+        url = str(e.get("url") or "").strip()
+        method = str(e.get("method") or "GET")
+        if not url:
+            url = f"/live-monitor/{eid}"
+
+        lc = e.get("last_check")
+        if isinstance(lc, dict):
+            ts = str(lc.get("checked_at") or checked_at_fallback)
+            status = lc.get("status_code")
+            if status is None:
+                status = 0
+            lat = float(lc.get("latency_ms") or 0)
+            ok = lc.get("ok")
+            err: str | None = lc.get("error")
+            if ok is False and not err:
+                err = "check failed"
+        else:
+            if not e.get("enabled"):
+                continue
+            ts = checked_at_fallback
+            status = 0
+            lat = 0.0
+            err = "no check data yet"
+
+        rows.append(
+            {
+                "id": str(uuid4()),
+                "timestamp": ts,
+                "endpoint": url,
+                "method": method,
+                "status_code": int(status) if status is not None else 0,
+                "response_time_ms": lat,
+                "error_message": err,
+                "service": f"live-monitor:{name}",
+                "trace_id": eid,
+                "api_label": name,
+            }
+        )
+    return rows
+
+
+def synthetic_api_logs_from_stored_snapshot(snap: dict[str, Any]) -> list[dict[str, Any]]:
+    """Rebuild upload rows from a snapshot dict (e.g. legacy file without embedded logs)."""
+    cached = snap.get("synthetic_api_logs")
+    if isinstance(cached, list) and cached:
+        return list(cached)
+    fallback_ts = snap.get("exported_at") or snap.get("last_run_at") or datetime.now(
+        timezone.utc
+    ).isoformat()
+    rows: list[dict[str, Any]] = []
+    for ep in snap.get("endpoints") or []:
+        eid = str(ep.get("id") or uuid4())
+        name = str(ep.get("name") or "monitor")
+        url = str(ep.get("url") or "").strip()
+        method = str(ep.get("method") or "GET")
+        if not url:
+            url = f"/live-monitor/{eid}"
+        if not ep.get("enabled"):
+            continue
+        checked_at = ep.get("checked_at")
+        status = ep.get("status_code")
+        lat = ep.get("latency_ms")
+        ok = ep.get("ok")
+        if checked_at is None and status is None and lat is None:
+            continue
+        ts = str(checked_at or fallback_ts)
+        sc = int(status) if status is not None else 0
+        rtm = float(lat or 0)
+        err: str | None = None
+        if ok is False:
+            err = "check failed"
+        rows.append(
+            {
+                "id": str(uuid4()),
+                "timestamp": ts,
+                "endpoint": url,
+                "method": method,
+                "status_code": sc,
+                "response_time_ms": rtm,
+                "error_message": err,
+                "service": f"live-monitor:{name}",
+                "trace_id": eid,
+                "api_label": name,
+            }
+        )
+    return rows
+
+
 def build_user_snapshot(monitors_payload: dict[str, Any]) -> dict[str, Any]:
     """Summarize one user's monitor run for overview / file storage."""
     endpoints_in = monitors_payload.get("endpoints") or []
@@ -79,6 +177,8 @@ def build_user_snapshot(monitors_payload: dict[str, Any]) -> dict[str, Any]:
             {
                 "id": e.get("id"),
                 "name": e.get("name"),
+                "url": e.get("url"),
+                "method": e.get("method") or "GET",
                 "enabled": bool(e.get("enabled")),
                 "ok": lc.get("ok") if isinstance(lc, dict) else None,
                 "status_code": lc.get("status_code") if isinstance(lc, dict) else None,
@@ -118,6 +218,8 @@ def build_user_snapshot(monitors_payload: dict[str, Any]) -> dict[str, Any]:
         else:
             overall = "healthy"
 
+    synthetic = build_synthetic_api_logs(monitors_payload)
+
     return {
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "last_run_at": monitors_payload.get("checked_at"),
@@ -132,6 +234,7 @@ def build_user_snapshot(monitors_payload: dict[str, Any]) -> dict[str, Any]:
             "enabled_count": len(enabled),
         },
         "overall_health": overall,
+        "synthetic_api_logs": synthetic,
     }
 
 

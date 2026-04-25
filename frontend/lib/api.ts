@@ -190,6 +190,8 @@ export type LiveMonitoringSnapshotKpis = {
 export type LiveMonitoringSnapshotEndpoint = {
   id: string;
   name: string;
+  url?: string | null;
+  method?: string;
   enabled: boolean;
   ok: boolean | null;
   status_code: number | null;
@@ -207,6 +209,8 @@ export type LiveMonitoringSnapshot = {
   recent_alerts_count: number;
   kpis: LiveMonitoringSnapshotKpis;
   overall_health: string;
+  /** Synthetic rows for Overview upload (api_logs.json shape). */
+  synthetic_api_logs?: Record<string, unknown>[];
 };
 
 export async function getLiveMonitoringSnapshot(): Promise<LiveMonitoringSnapshot | null> {
@@ -217,6 +221,20 @@ export async function getLiveMonitoringSnapshot(): Promise<LiveMonitoringSnapsho
     throw new Error(t || r.statusText);
   }
   return r.json() as Promise<LiveMonitoringSnapshot>;
+}
+
+/** Root JSON array of log objects (Overview upload). 404 → null. */
+export async function getLiveMonitoringLogsExport(): Promise<Record<
+  string,
+  unknown
+>[] | null> {
+  const r = await apiGet("/api/live-monitoring/logs-export");
+  if (r.status === 404) return null;
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(t || r.statusText);
+  }
+  return r.json() as Promise<Record<string, unknown>[]>;
 }
 
 export type MonitorEndpointWriteBody = {

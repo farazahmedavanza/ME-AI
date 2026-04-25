@@ -164,7 +164,17 @@ export function DashboardClient() {
           currentSessionId={sessionId}
           onSessionChange={onSessionChange}
         />
-        <LiveMonitoringWidget autoRefresh refreshMs={30_000} />
+        <LiveMonitoringWidget
+          autoRefresh
+          refreshMs={30_000}
+          onImportedLiveLogs={() => {
+            void load();
+            setToast({
+              msg: "Overview updated from live monitoring export.",
+              kind: "success",
+            });
+          }}
+        />
         <p className="text-slate-400">
           No log session yet. Start the API and wait for seed, or upload JSON.
         </p>
@@ -238,7 +248,17 @@ export function DashboardClient() {
       </header>
 
       <KpiRow kpis={dash.data.kpis} />
-      <LiveMonitoringWidget autoRefresh={auto} refreshMs={30_000} />
+      <LiveMonitoringWidget
+        autoRefresh={auto}
+        refreshMs={30_000}
+        onImportedLiveLogs={() => {
+          void load();
+          setToast({
+            msg: "Overview updated from live monitoring export.",
+            kind: "success",
+          });
+        }}
+      />
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2" id="apis">
         <div id="sla">
           <HealthOverviewTable rows={dash.data.endpoints} />

@@ -45,6 +45,17 @@ describe("parseUploadJsonFile", () => {
   it("rejects null elements", () => {
     expect(() => parseUploadJsonFile("[null]")).toThrow();
   });
+
+  it("accepts live_monitor_logs_v1 wrapper", () => {
+    const logs = parseUploadJsonFile(
+      JSON.stringify({
+        format: "live_monitor_logs_v1",
+        logs: [{ timestamp: "t", endpoint: "/x", method: "GET", status_code: 201 }],
+      }),
+    );
+    expect(logs).toHaveLength(1);
+    expect(logs[0].status_code).toBe(201);
+  });
 });
 
 describe("parseRdvOrTextLogFile", () => {

@@ -4,6 +4,8 @@
  * **Option A — JSON file:** a single top-level JSON array of log row objects
  * (see backend `upload_logs` / `api_logs.json`).
  *
+ * Also accepts `{ "format": "live_monitor_logs_v1", "logs": [...] }` from live monitoring export.
+ *
  * **Option B — Rdv / mixed text logs:** line-oriented scan. Rows are created from
  * `Rest Response Message:` blocks that contain XML with `RdvStatusCode`.
  * Endpoint: last `RequestUri: '...'`, or `Request URI : https://...` (Dewa), then
@@ -146,6 +148,15 @@ export function parseUploadJsonFile(text: string): LogRow[] {
     data = JSON.parse(text);
   } catch {
     throw new Error("Invalid JSON: file must contain a single JSON array of log objects.");
+  }
+  if (
+    data !== null &&
+    typeof data === "object" &&
+    !Array.isArray(data) &&
+    (data as { format?: string }).format === "live_monitor_logs_v1" &&
+    Array.isArray((data as { logs?: unknown }).logs)
+  ) {
+    data = (data as { logs: unknown }).logs;
   }
   if (!Array.isArray(data)) {
     throw new Error("File must be a JSON array of log objects.");

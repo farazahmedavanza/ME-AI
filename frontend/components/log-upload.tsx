@@ -18,8 +18,9 @@ export function LogUpload({ onDone }: { onDone: () => void }) {
   return (
     <div className="space-y-4 text-xs text-slate-400">
       <p className="text-slate-500">
-        If your export is a single <span className="text-slate-300">JSON array</span>, use{" "}
-        <span className="text-slate-300">JSON</span>. If it is a service log with plain text
+        If your export is a single <span className="text-slate-300">JSON array</span> of log
+        objects, or a <span className="text-slate-300">live_monitor_logs_v1</span> wrapper from
+        Live Monitoring, use <span className="text-slate-300">JSON</span>. If it is a service log with plain text
         and XML, use <span className="text-slate-300">Other log file</span>.
       </p>
 
