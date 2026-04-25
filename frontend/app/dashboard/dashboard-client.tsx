@@ -15,7 +15,8 @@ import { SessionPicker } from "@/components/session-picker";
 import { AddWidgetButton } from "@/components/add-widget-dialog";
 import { ToastBar } from "@/components/toast-bar";
 import { LiveMonitoringWidget } from "@/components/live-monitoring-widget";
-import { apiGet, getHealth } from "@/lib/api";
+import { apiGet, clearToken, getHealth } from "@/lib/api";
+import { getSupabase } from "@/lib/supabase";
 
 type DashboardPayload = {
   data: {
@@ -67,6 +68,7 @@ export function DashboardClient() {
   const [auto, setAuto] = useState(true);
   const [dash, setDash] = useState<DashboardPayload | null>(null);
   const [ai, setAi] = useState("local");
+  const [loggingOut, setLoggingOut] = useState(false);
   const [initialError, setInitialError] = useState<string | null>(null);
   const firstFetch = useRef(true);
   const [toast, setToast] = useState<{
@@ -88,6 +90,27 @@ export function DashboardClient() {
     const qs = p.toString();
     router.push(qs ? `/dashboard?${qs}` : "/dashboard");
   };
+
+  const handleLogout = useCallback(async () => {
+    setLoggingOut(true);
+    try {
+      const sb = getSupabase();
+      if (sb) {
+        const { error } = await sb.auth.signOut();
+        if (error) throw error;
+      }
+      clearToken();
+      router.replace("/login");
+      router.refresh();
+    } catch (e) {
+      setToast({
+        msg: e instanceof Error ? e.message : "Logout failed",
+        kind: "error",
+      });
+    } finally {
+      setLoggingOut(false);
+    }
+  }, [router]);
 
   const load = useCallback(async () => {
     const q = new URLSearchParams();
@@ -159,6 +182,16 @@ export function DashboardClient() {
   if (dash.empty || !dash.data) {
     return (
       <div className="space-y-3">
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            disabled={loggingOut}
+            className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs font-medium text-slate-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loggingOut ? "Logging out..." : "Logout"}
+          </button>
+        </div>
         <DegradedModeBanner />
         <SessionPicker
           currentSessionId={sessionId}
@@ -243,6 +276,14 @@ export function DashboardClient() {
             />
             Auto-refresh 30s
           </label>
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            disabled={loggingOut}
+            className="rounded border border-slate-600 bg-slate-800 px-2 py-1 font-medium text-slate-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loggingOut ? "Logging out..." : "Logout"}
+          </button>
           <AddWidgetButton />
         </div>
       </header>

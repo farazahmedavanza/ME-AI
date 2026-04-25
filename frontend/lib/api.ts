@@ -14,6 +14,11 @@ export function setToken(t: string) {
   localStorage.setItem(TOKEN_KEY, t);
 }
 
+export function clearToken() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(TOKEN_KEY);
+}
+
 export async function fetchToken() {
   const r = await fetch(`${API_BASE}/api/auth/token`, { method: "POST" });
   if (!r.ok) throw new Error("Could not get token");

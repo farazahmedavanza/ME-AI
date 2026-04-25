@@ -14,7 +14,7 @@ export function DegradedModeBanner() {
         }
         if (h.store_fallback) {
           parts.push(
-            "Supabase was unavailable — fell back to local SQLite for this process. Data is on this machine only."
+            "Supabase was unavailable — fell back to local SQLite for this process"
           );
         }
         if (h.ai === "local") {
