@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AvanzaBrandLogo } from "@/components/avanza-brand-logo";
 import { LogUpload } from "@/components/log-upload";
 
 export default function UploadPage() {
   const router = useRouter();
   return (
     <div className="mx-auto max-w-lg p-6">
-      <div className="mb-1 text-lg font-light text-white">avanza</div>
-      <div className="mb-6 text-xs font-bold uppercase text-blue-500">BANKING</div>
+      <div className="mb-6">
+        <AvanzaBrandLogo size="md" />
+      </div>
       <h1 className="text-lg font-medium text-slate-200">Upload API logs</h1>
       <p className="mt-1 text-sm text-slate-500">
         Upload a <span className="text-slate-300">JSON array</span> of log objects, or a{" "}

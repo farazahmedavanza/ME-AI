@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { fetchToken, setToken } from "@/lib/api";
+import { AvanzaBrandLogo } from "@/components/avanza-brand-logo";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
 export default function LoginPage() {
@@ -51,8 +52,9 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-avbg px-4">
       <div className="w-full max-w-sm rounded border border-avline bg-slate-900/50 p-6">
-        <div className="mb-1 text-lg font-light text-white">avanza</div>
-        <div className="mb-6 text-xs font-bold uppercase text-blue-500">BANKING</div>
+        <div className="mb-6">
+          <AvanzaBrandLogo size="md" />
+        </div>
         <h1 className="text-base font-medium text-slate-200">Ops sign-in</h1>
         <p className="mt-1 text-xs text-slate-500">
           Use Supabase Auth when env is configured; otherwise use the local API token for demos.

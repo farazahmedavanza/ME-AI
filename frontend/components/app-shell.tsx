@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AvanzaBrandLogo } from "@/components/avanza-brand-logo";
 import { cn } from "@/lib/cn";
 
 const nav = [
@@ -24,10 +25,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       <aside className="w-56 shrink-0 border-r border-avline bg-slate-950/80 p-3">
         <div className="px-1 py-2">
-          <div className="text-lg font-light tracking-tight text-white">
-            avanza
-          </div>
-          <div className="text-xs font-bold uppercase text-blue-500">BANKING</div>
+          <Link href="/dashboard" className="block outline-offset-2 hover:opacity-90">
+            <AvanzaBrandLogo size="md" />
+          </Link>
         </div>
         <nav className="mt-2 space-y-0.5">
           {nav.map((n) => {
