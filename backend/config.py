@@ -29,6 +29,11 @@ class Settings(BaseModel):
     openrouter_model: str = "meta-llama/llama-3.1-8b-instruct:free"
     openrouter_timeout_s: float = 12.0
 
+    # Local Ollama (e.g. `ollama run llama3.2`); set OLLAMA_MODEL to enable
+    ollama_base_url: str = "http://127.0.0.1:11434"
+    ollama_model: str = ""
+    ollama_timeout_s: float = 120.0
+
     supabase_url: str = ""
     supabase_service_key: str = ""
     supabase_jwt_secret: str = ""
@@ -98,6 +103,10 @@ def get_settings() -> Settings:
         "openrouter_api_key": (os.getenv("OPENROUTER_API_KEY", "") or "").strip(),
         "openrouter_model": os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.1-8b-instruct:free"),
         "openrouter_timeout_s": float(os.getenv("OPENROUTER_TIMEOUT_S", "12")),
+        "ollama_base_url": (os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434") or "").strip()
+        or "http://127.0.0.1:11434",
+        "ollama_model": (os.getenv("OLLAMA_MODEL", "") or "").strip(),
+        "ollama_timeout_s": float(os.getenv("OLLAMA_TIMEOUT_S", "120")),
         "supabase_url": (os.getenv("SUPABASE_URL", "") or "").strip(),
         "supabase_service_key": (os.getenv("SUPABASE_KEY", "") or "").strip(),
         "supabase_jwt_secret": (os.getenv("SUPABASE_JWT_SECRET", "") or "").strip(),

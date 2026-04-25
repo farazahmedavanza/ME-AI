@@ -7,12 +7,25 @@ import {
   parseUploadJsonFile,
 } from "@/lib/log-upload-parsers";
 
+type OllamaHealth = { text: string; mode: string };
+
 export function LogUpload({ onDone }: { onDone: () => void }) {
   const [msg, setMsg] = useState<string | null>(null);
+  const [otherLogHealth, setOtherLogHealth] = useState<OllamaHealth | null>(null);
   const [busy, setBusy] = useState(false);
-  async function postLogs(filename: string, logs: Record<string, unknown>[]) {
-    const r = await apiPost("/api/upload-logs", { filename, logs });
+  async function postLogs(
+    filename: string,
+    logs: Record<string, unknown>[],
+    importKind?: "other_log"
+  ) {
+    const body: Record<string, unknown> = { filename, logs };
+    if (importKind) body.import_kind = importKind;
+    const r = await apiPost("/api/upload-logs", body);
     if (!r.ok) throw new Error(await r.text());
+    const data = (await r.json()) as {
+      ollama_api_health?: OllamaHealth;
+    };
+    return data;
   }
 
   return (
@@ -43,6 +56,7 @@ export function LogUpload({ onDone }: { onDone: () => void }) {
             try {
               const text = await f.text();
               const logs = parseUploadJsonFile(text);
+              setOtherLogHealth(null);
               await postLogs(f.name, logs);
               setMsg("JSON upload successful.");
               onDone();
@@ -73,6 +87,7 @@ export function LogUpload({ onDone }: { onDone: () => void }) {
             if (!f) return;
             setBusy(true);
             setMsg(null);
+            setOtherLogHealth(null);
             try {
               const text = await f.text();
               const { logs, warnings } = parseRdvOrTextLogFile(text, f.name);
@@ -85,9 +100,12 @@ export function LogUpload({ onDone }: { onDone: () => void }) {
                 e.target.value = "";
                 return;
               }
-              await postLogs(f.name, logs);
+              const res = await postLogs(f.name, logs, "other_log");
               const extra = warnings.length ? ` ${warnings.join(" ")}` : "";
               setMsg(`Upload successful (${logs.length} row(s)).${extra}`);
+              if (res.ollama_api_health) {
+                setOtherLogHealth(res.ollama_api_health);
+              }
               onDone();
             } catch (err) {
               setMsg(err instanceof Error ? err.message : "Upload failed");
@@ -101,6 +119,23 @@ export function LogUpload({ onDone }: { onDone: () => void }) {
 
       {busy && <p className="text-slate-500">Uploading…</p>}
       {msg && <p className="text-slate-500">{msg}</p>}
+      {otherLogHealth && (
+        <div className="rounded border border-avline border-slate-600 bg-slate-950/40 p-3 text-slate-300">
+          <div className="text-[10px] text-slate-500">
+            API health summary — {otherLogHealth.mode}
+            {otherLogHealth.mode === "template" && (
+              <span className="text-slate-600"> (set OLLAMA_MODEL + run Ollama for LLM text)</span>
+            )}
+          </div>
+          <div className="mt-2 space-y-2 text-xs leading-relaxed text-slate-200">
+            {otherLogHealth.text.split("\n\n").map((p, i) => (
+              <p key={i} className="text-justify last:mb-0">
+                {p}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

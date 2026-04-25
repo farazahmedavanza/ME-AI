@@ -282,7 +282,7 @@ export function DashboardClient() {
           />
         </div>
         <div className="lg:col-span-1" id="incident">
-          <IncidentReportPanel sessionId={s} ai={ai} />
+          <IncidentReportPanel sessionId={s} ai={ai} rangeKey={range} />
         </div>
       </div>
       <div className="grid max-w-md gap-2 text-xs" id="settings">

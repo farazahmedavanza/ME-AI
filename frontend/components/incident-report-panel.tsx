@@ -68,9 +68,11 @@ function buildPrintHtml(body: string, logoSrc: string, dateStr: string): string 
 export function IncidentReportPanel({
   sessionId,
   ai,
+  rangeKey,
 }: {
   sessionId: string | null;
   ai: "openrouter" | "local" | string;
+  rangeKey: string;
 }) {
   const [text, setText] = useState(
     "Generate a new report to see a three-paragraph operations summary for the worst-affected API in the current log window. If the generative model is not configured, a deterministic template is used."
@@ -82,7 +84,10 @@ export function IncidentReportPanel({
     if (!sessionId) return;
     setLoading(true);
     try {
-      const r = await apiPost("/api/incident-report", { session_id: sessionId });
+      const r = await apiPost("/api/incident-report", {
+        session_id: sessionId,
+        range_key: rangeKey,
+      });
       if (!r.ok) throw new Error(await r.text());
       const d = (await r.json()) as { text: string; ai_mode: string };
       setText(d.text);

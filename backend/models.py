@@ -27,6 +27,7 @@ class IncidentReportRequest(BaseModel):
     session_id: str
     endpoint: str | None = None
     service: str | None = None
+    range_key: str = "1h"
 
 
 class LogSearchRequest(BaseModel):

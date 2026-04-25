@@ -30,14 +30,19 @@ def filter_by_range(
     delta = deltas.get(range_key, deltas["1h"])
     start = now - delta
     out: list[dict[str, Any]] = []
+    parse_ok = 0
     for row in logs:
         try:
             ts = _parse_ts(str(row.get("timestamp", "")))
+            parse_ok += 1
             if ts >= start:
                 out.append(row)
         except Exception:
             continue
-    return out if out else logs  # if all parse fail, return all
+    # Keep strict window behavior; only fall back when timestamps are unparseable.
+    if parse_ok == 0:
+        return logs
+    return out
 
 
 def group_by_service(logs: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
@@ -144,10 +149,6 @@ def build_dashboard(
     now = datetime.now(timezone.utc)
     window_logs = filter_by_range(logs, range_key, now)
     if not window_logs:
-        window_logs = logs
-    # Hackathon demo: if the time window is sparse, use full sample for charts/tables
-    services_in = len({str(r.get("service") or "") for r in window_logs})
-    if len(window_logs) < 100 or services_in < 3:
         window_logs = logs
 
     by_svc = group_by_service(window_logs)

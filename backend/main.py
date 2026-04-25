@@ -19,7 +19,11 @@ from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from ai_service import generate_incident_report, search_logs_nl
+from ai_service import (
+    generate_incident_report,
+    ollama_api_health_narrative_for_other_log_import,
+    search_logs_nl,
+)
 from analytics import build_alerts_from_endpoints, build_dashboard
 from auth import get_user_id, issue_local_token
 from config import get_settings
@@ -183,16 +187,24 @@ def list_sessions(user_id: Annotated[str, Depends(get_user_id)]):
 class UploadIn(BaseModel):
     filename: str = "api_logs.json"
     logs: list[dict[str, Any]]
+    # Set to "other_log" only from the text/Rdv/plain log upload control (Ollama health blurb).
+    import_kind: str | None = None
 
 
 @app.post("/api/upload-logs")
-def upload_logs(
+async def upload_logs(
     body: UploadIn, user_id: Annotated[str, Depends(get_user_id)]
 ):
     st = _store()
     session_id = st.upload_logs(user_id, body.filename, body.logs)
-    _recompute_and_persist(st, user_id, session_id, "1h")
-    return {"session_id": session_id, "ok": True}
+    board = _recompute_and_persist(st, user_id, session_id, "1h")
+    out: dict[str, Any] = {"session_id": session_id, "ok": True}
+    if (body.import_kind or "").strip() == "other_log":
+        text, mode = await ollama_api_health_narrative_for_other_log_import(
+            board, "1h"
+        )
+        out["ollama_api_health"] = {"text": text, "mode": mode}
+    return out
 
 
 @app.get("/api/sessions/{session_id}/results")
@@ -230,7 +242,7 @@ def dashboard(
     _ensure_alerts(st, user_id, session_id, board)
     alerts = st.get_alerts(user_id, session_id)
     incidents = st.get_incident_reports(user_id, session_id)
-    s = get_settings()
+    s2 = get_settings()
     return {
         "ok": True,
         "empty": False,
@@ -240,7 +252,7 @@ def dashboard(
         "alerts": alerts,
         "incident_reports": incidents,
         "store": (st.health() or {}).get("store", "local"),
-        "ai": "openrouter" if s.openrouter_api_key else "local",
+        "ai": "openrouter" if s2.openrouter_api_key else "local",
     }
 
 
@@ -273,7 +285,8 @@ async def incident_report(
     st = _store()
     session_id = body.session_id
     logs = st.get_session_logs(user_id, session_id)
-    board = build_dashboard(logs, "1h")
+    range_key = body.range_key if body.range_key in {"15m", "1h", "6h", "24h"} else "1h"
+    board = build_dashboard(logs, range_key)
     label = "All APIs"
     stat: dict = {}
     svc = body.service
@@ -303,7 +316,7 @@ async def incident_report(
         stat = {"note": "no log data"}
     text, mode = await generate_incident_report(
         str(label or svc or "Service"),
-        "1h",
+        range_key,
         stat,
     )
     key = f"{label}-{datetime.now(timezone.utc).strftime('%H%M')}"
