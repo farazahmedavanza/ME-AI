@@ -6,6 +6,7 @@ import { cn } from "@/lib/cn";
 
 const nav = [
   { href: "/dashboard", label: "Overview" },
+  { href: "/configure-endpoints", label: "Configure endpoints" },
   { href: "/upload", label: "Upload logs" },
   { href: "/dashboard#apis", label: "APIs" },
   { href: "/dashboard#alerts", label: "Alerts" },
@@ -29,18 +30,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="text-xs font-bold uppercase text-blue-500">BANKING</div>
         </div>
         <nav className="mt-2 space-y-0.5">
-          {nav.map((n) => (
+          {nav.map((n) => {
+            const base = n.href.split("#")[0];
+            const active =
+              path === n.href ||
+              (path === base && n.label === "Overview" && base === "/dashboard");
+            return (
             <Link
               key={n.href}
               href={n.href}
               className={cn(
                 "block rounded px-2 py-1.5 text-sm text-slate-400 hover:bg-slate-900 hover:text-slate-100",
-                path?.startsWith("/dashboard") && n.label === "Overview" && "bg-slate-900 text-slate-100"
+                active && "bg-slate-900 text-slate-100"
               )}
             >
               {n.label}
             </Link>
-          ))}
+            );
+          })}
         </nav>
         <div className="mt-8 border-t border-avline pt-3 text-xs text-slate-500">
           <div className="font-medium text-slate-300">Ops team</div>

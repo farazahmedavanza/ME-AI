@@ -21,6 +21,10 @@ from ai_service import generate_incident_report, search_logs_nl
 from analytics import build_alerts_from_endpoints, build_dashboard
 from auth import get_user_id, issue_local_token
 from config import get_settings
+from endpoint_monitor_service import (
+    run_endpoint_monitors,
+    snapshot_endpoint_monitors,
+)
 from models import (
     DevLoginResponse,
     HealthResponse,
@@ -300,6 +304,75 @@ def get_logs(
     user_id: Annotated[str, Depends(get_user_id)], session_id: str
 ):
     return {"logs": _store().get_session_logs(user_id, session_id)}
+
+
+class MonitorEndpointPatch(BaseModel):
+    name: str | None = None
+    url: str | None = None
+    method: str | None = None
+    expected_status_min: int | None = None
+    expected_status_max: int | None = None
+    timeout_ms: int | None = None
+    enabled: bool | int | None = None
+    sla_max_latency_ms: int | None = None
+    sla_min_uptime_pct: float | None = None
+    failure_threshold: int | None = None
+    webhook_url: str | None = None
+
+
+class MonitorAlertPatch(BaseModel):
+    resolution_status: str | None = None
+
+
+@app.get("/api/endpoint-monitors")
+async def endpoint_monitors(
+    user_id: Annotated[str, Depends(get_user_id)],
+    refresh: bool = Query(True, description="Run live HTTP checks (false = DB snapshot only)"),
+):
+    st = _store()
+    if refresh:
+        return await run_endpoint_monitors(st, user_id)
+    return snapshot_endpoint_monitors(st, user_id)
+
+
+@app.patch("/api/endpoint-monitors/{endpoint_id}")
+def patch_monitored_endpoint(
+    endpoint_id: str,
+    body: MonitorEndpointPatch,
+    user_id: Annotated[str, Depends(get_user_id)],
+):
+    st = _store()
+    if not hasattr(st, "update_monitored_endpoint"):
+        raise HTTPException(501, "Endpoint monitor not available for this store")
+    fields = body.model_dump(exclude_unset=True)
+    if "enabled" in fields and fields["enabled"] is not None:
+        e = fields["enabled"]
+        fields["enabled"] = 1 if (e is True or e == 1) else 0
+    ok = st.update_monitored_endpoint(user_id, endpoint_id, fields)
+    if not ok:
+        raise HTTPException(404, "Endpoint not found")
+    return {"ok": True}
+
+
+@app.patch("/api/endpoint-monitors/monitor-alerts/{alert_id}")
+def patch_endpoint_monitor_alert(
+    alert_id: str,
+    body: MonitorAlertPatch,
+    user_id: Annotated[str, Depends(get_user_id)],
+):
+    st = _store()
+    if not hasattr(st, "update_endpoint_monitor_alert"):
+        raise HTTPException(501, "Not available")
+    if not body.resolution_status:
+        raise HTTPException(400, "resolution_status required")
+    ok = st.update_endpoint_monitor_alert(
+        user_id,
+        alert_id,
+        {"resolution_status": body.resolution_status},
+    )
+    if not ok:
+        raise HTTPException(404, "Alert not found")
+    return {"ok": True}
 
 
 # --- Optional: static sample file load ---

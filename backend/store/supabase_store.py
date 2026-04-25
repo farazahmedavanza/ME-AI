@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -232,3 +232,254 @@ class SupabaseStore:
         if isinstance(r, dict):
             return {k: str(v) for k, v in r.items() if isinstance(v, str)}
         return {}
+
+    # --- External HTTP endpoint monitor ---
+
+    def _seed_monitors_if_empty(self, user_id: str) -> None:
+        from endpoint_monitor import DEFAULT_MONITORED
+
+        r = (
+            self._client.table("monitored_endpoints")
+            .select("id")
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+        if r.data:
+            return
+        for spec in DEFAULT_MONITORED:
+            self._client.table("monitored_endpoints").insert(
+                {
+                    "id": new_id(),
+                    "user_id": user_id,
+                    "name": spec["name"],
+                    "url": spec["url"],
+                    "method": spec.get("method") or "GET",
+                    "expected_status_min": int(spec.get("expected_status_min", 200)),
+                    "expected_status_max": int(spec.get("expected_status_max", 299)),
+                    "timeout_ms": int(spec.get("timeout_ms", 10_000)),
+                    "enabled": bool(int(spec.get("enabled", 1))),
+                    "sla_max_latency_ms": int(spec.get("sla_max_latency_ms", 3000)),
+                    "sla_min_uptime_pct": float(spec.get("sla_min_uptime_pct", 99.0)),
+                    "failure_threshold": int(spec.get("failure_threshold", 2)),
+                    "webhook_url": spec.get("webhook_url"),
+                }
+            ).execute()
+
+    def list_monitored_endpoints(self, user_id: str) -> list[dict[str, Any]]:
+        self._seed_monitors_if_empty(user_id)
+        r = (
+            self._client.table("monitored_endpoints")
+            .select(
+                "id, name, url, method, expected_status_min, expected_status_max, "
+                "timeout_ms, enabled, sla_max_latency_ms, sla_min_uptime_pct, failure_threshold, webhook_url"
+            )
+            .eq("user_id", user_id)
+            .order("name", desc=False)
+            .execute()
+        )
+        return list(r.data or [])
+
+    def update_monitored_endpoint(
+        self, user_id: str, endpoint_id: str, fields: dict[str, Any]
+    ) -> bool:
+        allowed = {
+            "name",
+            "url",
+            "method",
+            "expected_status_min",
+            "expected_status_max",
+            "timeout_ms",
+            "enabled",
+            "sla_max_latency_ms",
+            "sla_min_uptime_pct",
+            "failure_threshold",
+            "webhook_url",
+        }
+        payload = {k: v for k, v in fields.items() if k in allowed}
+        if "enabled" in payload and payload["enabled"] is not None:
+            e = payload["enabled"]
+            payload["enabled"] = e if isinstance(e, bool) else bool(int(e))
+        if not payload:
+            return True
+        r = (
+            self._client.table("monitored_endpoints")
+            .update(payload)
+            .eq("id", endpoint_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+        return bool(r.data)
+
+    def get_monitor_state(
+        self, user_id: str, endpoint_id: str
+    ) -> dict[str, Any] | None:
+        r = (
+            self._client.table("endpoint_monitor_state")
+            .select(
+                "last_ok, consecutive_failures, last_status_code, last_latency_ms, last_checked_at, last_error"
+            )
+            .eq("user_id", user_id)
+            .eq("endpoint_id", endpoint_id)
+            .limit(1)
+            .execute()
+        )
+        if not r.data:
+            return None
+        return r.data[0]
+
+    def upsert_monitor_state(
+        self,
+        user_id: str,
+        endpoint_id: str,
+        last_ok: int,
+        consecutive_failures: int,
+        last_status_code: int | None,
+        last_latency_ms: float | None,
+        last_checked_at: str,
+        last_error: str | None,
+    ) -> None:
+        row = {
+            "user_id": user_id,
+            "endpoint_id": endpoint_id,
+            "last_ok": last_ok,
+            "consecutive_failures": consecutive_failures,
+            "last_status_code": last_status_code,
+            "last_latency_ms": last_latency_ms,
+            "last_checked_at": last_checked_at,
+            "last_error": last_error,
+        }
+        self._client.table("endpoint_monitor_state").upsert(
+            row, on_conflict="user_id,endpoint_id"
+        ).execute()  # requires UNIQUE(user_id, endpoint_id) in DB
+
+    def insert_endpoint_check(
+        self,
+        user_id: str,
+        endpoint_id: str,
+        ok: int,
+        status_code: int | None,
+        latency_ms: float | None,
+        error: str | None,
+        checked_at: str,
+    ) -> str:
+        rid = new_id()
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=26)).isoformat()
+        self._client.table("endpoint_check_history").insert(
+            {
+                "id": rid,
+                "user_id": user_id,
+                "endpoint_id": endpoint_id,
+                "ok": bool(ok),
+                "status_code": status_code,
+                "latency_ms": latency_ms,
+                "error": error,
+                "checked_at": checked_at,
+            }
+        ).execute()
+        self._client.table("endpoint_check_history").delete().eq("user_id", user_id).lt(
+            "checked_at", cutoff
+        ).execute()
+        return rid
+
+    def recent_endpoint_history(
+        self, user_id: str, endpoint_id: str, limit: int
+    ) -> list[dict[str, Any]]:
+        r = (
+            self._client.table("endpoint_check_history")
+            .select("ok, status_code, latency_ms, error, checked_at")
+            .eq("user_id", user_id)
+            .eq("endpoint_id", endpoint_id)
+            .order("checked_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return list(r.data or [])
+
+    def history_for_uptime(
+        self, user_id: str, endpoint_id: str, since_iso: str
+    ) -> list[dict[str, Any]]:
+        r = (
+            self._client.table("endpoint_check_history")
+            .select("ok, checked_at")
+            .eq("user_id", user_id)
+            .eq("endpoint_id", endpoint_id)
+            .gte("checked_at", since_iso)
+            .order("checked_at", desc=False)
+            .execute()
+        )
+        return list(r.data or [])
+
+    def count_open_monitor_alerts(
+        self, user_id: str, endpoint_id: str
+    ) -> int:
+        r = (
+            self._client.table("endpoint_monitor_alerts")
+            .select("id")
+            .eq("user_id", user_id)
+            .eq("endpoint_id", endpoint_id)
+            .eq("resolution_status", "open")
+            .execute()
+        )
+        return len(r.data or [])
+
+    def list_endpoint_monitor_alerts(
+        self, user_id: str, limit: int = 100
+    ) -> list[dict[str, Any]]:
+        r = (
+            self._client.table("endpoint_monitor_alerts")
+            .select(
+                "id, endpoint_id, name, severity, title, description, kind, created_at, "
+                "resolution_status, resolved_at"
+            )
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return list(r.data or [])
+
+    def insert_endpoint_monitor_alert(
+        self,
+        user_id: str,
+        endpoint_id: str,
+        name: str,
+        severity: str,
+        title: str,
+        description: str,
+        kind: str,
+    ) -> str:
+        aid = new_id()
+        now = datetime.now(timezone.utc).isoformat()
+        self._client.table("endpoint_monitor_alerts").insert(
+            {
+                "id": aid,
+                "user_id": user_id,
+                "endpoint_id": endpoint_id,
+                "name": name,
+                "severity": severity,
+                "title": title,
+                "description": description,
+                "kind": kind,
+                "created_at": now,
+                "resolution_status": "open",
+            }
+        ).execute()
+        return aid
+
+    def update_endpoint_monitor_alert(
+        self, user_id: str, alert_id: str, fields: dict[str, Any]
+    ) -> bool:
+        f = {k: v for k, v in fields.items() if k in ("resolution_status", "resolved_at")}
+        if "resolution_status" in f and f["resolution_status"] == "resolved" and "resolved_at" not in f:
+            f["resolved_at"] = datetime.now(timezone.utc).isoformat()
+        if not f:
+            return False
+        r = (
+            self._client.table("endpoint_monitor_alerts")
+            .update(f)
+            .eq("id", alert_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+        return bool(r.data)

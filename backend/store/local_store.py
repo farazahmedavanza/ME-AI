@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -62,6 +62,57 @@ CREATE TABLE IF NOT EXISTS alerts (
 );
 CREATE INDEX IF NOT EXISTS idx_logs_session ON api_logs(session_id);
 CREATE INDEX IF NOT EXISTS idx_alerts_session ON alerts(session_id);
+CREATE TABLE IF NOT EXISTS monitored_endpoints (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  method TEXT DEFAULT 'GET',
+  expected_status_min INTEGER DEFAULT 200,
+  expected_status_max INTEGER DEFAULT 299,
+  timeout_ms INTEGER DEFAULT 10000,
+  enabled INTEGER DEFAULT 1,
+  sla_max_latency_ms INTEGER DEFAULT 3000,
+  sla_min_uptime_pct REAL DEFAULT 99.0,
+  failure_threshold INTEGER DEFAULT 2,
+  webhook_url TEXT
+);
+CREATE TABLE IF NOT EXISTS endpoint_check_history (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  endpoint_id TEXT NOT NULL,
+  ok INTEGER NOT NULL,
+  status_code INTEGER,
+  latency_ms REAL,
+  error TEXT,
+  checked_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS endpoint_monitor_state (
+  user_id TEXT NOT NULL,
+  endpoint_id TEXT NOT NULL,
+  last_ok INTEGER,
+  consecutive_failures INTEGER DEFAULT 0,
+  last_status_code INTEGER,
+  last_latency_ms REAL,
+  last_checked_at TEXT,
+  last_error TEXT,
+  PRIMARY KEY (user_id, endpoint_id)
+);
+CREATE TABLE IF NOT EXISTS endpoint_monitor_alerts (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  endpoint_id TEXT NOT NULL,
+  name TEXT,
+  severity TEXT,
+  title TEXT,
+  description TEXT,
+  kind TEXT,
+  created_at TEXT NOT NULL,
+  resolution_status TEXT DEFAULT 'open',
+  resolved_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_ech_user_ep ON endpoint_check_history(user_id, endpoint_id, checked_at);
+CREATE INDEX IF NOT EXISTS idx_ema_user ON endpoint_monitor_alerts(user_id, created_at);
 """
 
 
@@ -319,3 +370,308 @@ class LocalStore:
         if isinstance(r, dict):
             return {k: str(v) for k, v in r.items() if isinstance(v, str)}
         return {}
+
+    # --- External HTTP endpoint monitor (configure endpoints / live checks) ---
+
+    def _seed_monitors_if_empty(self, user_id: str) -> None:
+        from endpoint_monitor import DEFAULT_MONITORED
+
+        with self._lock:
+            c = self._connect()
+            try:
+                n = c.execute(
+                    "SELECT COUNT(*) FROM monitored_endpoints WHERE user_id = ?",
+                    (user_id,),
+                ).fetchone()[0]
+                if n > 0:
+                    return
+                for spec in DEFAULT_MONITORED:
+                    eid = new_id()
+                    c.execute(
+                        "INSERT INTO monitored_endpoints (id, user_id, name, url, method, expected_status_min, "
+                        "expected_status_max, timeout_ms, enabled, sla_max_latency_ms, sla_min_uptime_pct, "
+                        "failure_threshold, webhook_url) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                        (
+                            eid,
+                            user_id,
+                            spec["name"],
+                            spec["url"],
+                            spec.get("method") or "GET",
+                            int(spec.get("expected_status_min", 200)),
+                            int(spec.get("expected_status_max", 299)),
+                            int(spec.get("timeout_ms", 10_000)),
+                            int(spec.get("enabled", 1)),
+                            int(spec.get("sla_max_latency_ms", 3000)),
+                            float(spec.get("sla_min_uptime_pct", 99.0)),
+                            int(spec.get("failure_threshold", 2)),
+                            spec.get("webhook_url"),
+                        ),
+                    )
+                c.commit()
+            finally:
+                c.close()
+
+    def list_monitored_endpoints(self, user_id: str) -> list[dict[str, Any]]:
+        self._seed_monitors_if_empty(user_id)
+        c = self._connect()
+        try:
+            cur = c.execute(
+                "SELECT id, name, url, method, expected_status_min, expected_status_max, timeout_ms, "
+                "enabled, sla_max_latency_ms, sla_min_uptime_pct, failure_threshold, webhook_url "
+                "FROM monitored_endpoints WHERE user_id = ? ORDER BY name",
+                (user_id,),
+            )
+            return [dict(r) for r in cur.fetchall()]
+        finally:
+            c.close()
+
+    def update_monitored_endpoint(
+        self, user_id: str, endpoint_id: str, fields: dict[str, Any]
+    ) -> bool:
+        if not fields:
+            return True
+        allowed = {
+            "name",
+            "url",
+            "method",
+            "expected_status_min",
+            "expected_status_max",
+            "timeout_ms",
+            "enabled",
+            "sla_max_latency_ms",
+            "sla_min_uptime_pct",
+            "failure_threshold",
+            "webhook_url",
+        }
+        sets: list[str] = []
+        vals: list[Any] = []
+        for k, v in fields.items():
+            if k not in allowed:
+                continue
+            sets.append(f"{k} = ?")
+            vals.append(v)
+        if not sets:
+            return True
+        vals.extend([endpoint_id, user_id])
+        with self._lock:
+            c = self._connect()
+            try:
+                r = c.execute(
+                    f"UPDATE monitored_endpoints SET {', '.join(sets)} "
+                    f"WHERE id = ? AND user_id = ?",
+                    vals,
+                )
+                c.commit()
+                return r.rowcount > 0
+            finally:
+                c.close()
+
+    def get_monitor_state(
+        self, user_id: str, endpoint_id: str
+    ) -> dict[str, Any] | None:
+        c = self._connect()
+        try:
+            r = c.execute(
+                "SELECT last_ok, consecutive_failures, last_status_code, last_latency_ms, last_checked_at, last_error "
+                "FROM endpoint_monitor_state WHERE user_id = ? AND endpoint_id = ?",
+                (user_id, endpoint_id),
+            ).fetchone()
+            if not r:
+                return None
+            return dict(r)
+        finally:
+            c.close()
+
+    def upsert_monitor_state(
+        self,
+        user_id: str,
+        endpoint_id: str,
+        last_ok: int,
+        consecutive_failures: int,
+        last_status_code: int | None,
+        last_latency_ms: float | None,
+        last_checked_at: str,
+        last_error: str | None,
+    ) -> None:
+        with self._lock:
+            c = self._connect()
+            try:
+                c.execute(
+                    "INSERT INTO endpoint_monitor_state (user_id, endpoint_id, last_ok, consecutive_failures, "
+                    "last_status_code, last_latency_ms, last_checked_at, last_error) VALUES (?,?,?,?,?,?,?,?) "
+                    "ON CONFLICT(user_id, endpoint_id) DO UPDATE SET last_ok=excluded.last_ok, "
+                    "consecutive_failures=excluded.consecutive_failures, last_status_code=excluded.last_status_code, "
+                    "last_latency_ms=excluded.last_latency_ms, last_checked_at=excluded.last_checked_at, "
+                    "last_error=excluded.last_error",
+                    (
+                        user_id,
+                        endpoint_id,
+                        last_ok,
+                        consecutive_failures,
+                        last_status_code,
+                        last_latency_ms,
+                        last_checked_at,
+                        last_error,
+                    ),
+                )
+                c.commit()
+            finally:
+                c.close()
+
+    def insert_endpoint_check(
+        self,
+        user_id: str,
+        endpoint_id: str,
+        ok: int,
+        status_code: int | None,
+        latency_ms: float | None,
+        error: str | None,
+        checked_at: str,
+    ) -> str:
+        rid = new_id()
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=26)).isoformat()
+        with self._lock:
+            c = self._connect()
+            try:
+                c.execute(
+                    "INSERT INTO endpoint_check_history (id, user_id, endpoint_id, ok, status_code, "
+                    "latency_ms, error, checked_at) VALUES (?,?,?,?,?,?,?,?)",
+                    (
+                        rid,
+                        user_id,
+                        endpoint_id,
+                        ok,
+                        status_code,
+                        latency_ms,
+                        error,
+                        checked_at,
+                    ),
+                )
+                c.execute(
+                    "DELETE FROM endpoint_check_history WHERE user_id = ? AND checked_at < ?",
+                    (user_id, cutoff),
+                )
+                c.commit()
+            finally:
+                c.close()
+        return rid
+
+    def recent_endpoint_history(
+        self, user_id: str, endpoint_id: str, limit: int
+    ) -> list[dict[str, Any]]:
+        c = self._connect()
+        try:
+            cur = c.execute(
+                "SELECT ok, status_code, latency_ms, error, checked_at FROM endpoint_check_history "
+                "WHERE user_id = ? AND endpoint_id = ? ORDER BY checked_at DESC LIMIT ?",
+                (user_id, endpoint_id, limit),
+            )
+            return [dict(r) for r in cur.fetchall()]
+        finally:
+            c.close()
+
+    def history_for_uptime(
+        self, user_id: str, endpoint_id: str, since_iso: str
+    ) -> list[dict[str, Any]]:
+        c = self._connect()
+        try:
+            cur = c.execute(
+                "SELECT ok, checked_at FROM endpoint_check_history WHERE user_id = ? AND endpoint_id = ? "
+                "AND checked_at >= ? ORDER BY checked_at ASC",
+                (user_id, endpoint_id, since_iso),
+            )
+            return [dict(r) for r in cur.fetchall()]
+        finally:
+            c.close()
+
+    def count_open_monitor_alerts(
+        self, user_id: str, endpoint_id: str
+    ) -> int:
+        c = self._connect()
+        try:
+            r = c.execute(
+                "SELECT COUNT(*) FROM endpoint_monitor_alerts WHERE user_id = ? AND endpoint_id = ? "
+                "AND resolution_status = 'open'",
+                (user_id, endpoint_id),
+            ).fetchone()
+            return int(r[0]) if r else 0
+        finally:
+            c.close()
+
+    def list_endpoint_monitor_alerts(
+        self, user_id: str, limit: int = 100
+    ) -> list[dict[str, Any]]:
+        c = self._connect()
+        try:
+            cur = c.execute(
+                "SELECT id, endpoint_id, name, severity, title, description, kind, created_at, "
+                "resolution_status, resolved_at FROM endpoint_monitor_alerts WHERE user_id = ? "
+                "ORDER BY created_at DESC LIMIT ?",
+                (user_id, limit),
+            )
+            return [dict(r) for r in cur.fetchall()]
+        finally:
+            c.close()
+
+    def insert_endpoint_monitor_alert(
+        self,
+        user_id: str,
+        endpoint_id: str,
+        name: str,
+        severity: str,
+        title: str,
+        description: str,
+        kind: str,
+    ) -> str:
+        aid = new_id()
+        now = datetime.now(timezone.utc).isoformat()
+        with self._lock:
+            c = self._connect()
+            try:
+                c.execute(
+                    "INSERT INTO endpoint_monitor_alerts (id, user_id, endpoint_id, name, severity, title, "
+                    "description, kind, created_at, resolution_status) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    (
+                        aid,
+                        user_id,
+                        endpoint_id,
+                        name,
+                        severity,
+                        title,
+                        description,
+                        kind,
+                        now,
+                        "open",
+                    ),
+                )
+                c.commit()
+            finally:
+                c.close()
+        return aid
+
+    def update_endpoint_monitor_alert(
+        self, user_id: str, alert_id: str, fields: dict[str, Any]
+    ) -> bool:
+        if "resolution_status" in fields and fields["resolution_status"] == "resolved":
+            if "resolved_at" not in fields:
+                fields = {**fields, "resolved_at": datetime.now(timezone.utc).isoformat()}
+        sets: list[str] = []
+        vals: list[Any] = []
+        for k in ("resolution_status", "resolved_at"):
+            if k in fields:
+                sets.append(f"{k} = ?")
+                vals.append(fields[k])
+        if not sets:
+            return False
+        vals.extend([alert_id, user_id])
+        with self._lock:
+            c = self._connect()
+            try:
+                cur = c.execute(
+                    f"UPDATE endpoint_monitor_alerts SET {', '.join(sets)} WHERE id = ? AND user_id = ?",
+                    vals,
+                )
+                c.commit()
+                return cur.rowcount > 0
+            finally:
+                c.close()

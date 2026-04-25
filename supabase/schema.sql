@@ -52,6 +52,63 @@ create table if not exists alerts (
 create index if not exists idx_api_logs_session on api_logs(session_id);
 create index if not exists idx_alerts_session on alerts(session_id);
 
+-- HTTP endpoint configuration & live monitor (used by /api/endpoint-monitors; backend uses service role)
+create table if not exists monitored_endpoints (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  name text not null,
+  url text not null,
+  method text default 'GET',
+  expected_status_min integer default 200,
+  expected_status_max integer default 299,
+  timeout_ms integer default 10000,
+  enabled boolean default true,
+  sla_max_latency_ms integer default 3000,
+  sla_min_uptime_pct real default 99.0,
+  failure_threshold integer default 2,
+  webhook_url text
+);
+
+create table if not exists endpoint_check_history (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  endpoint_id uuid not null references monitored_endpoints (id) on delete cascade,
+  ok boolean not null,
+  status_code integer,
+  latency_ms real,
+  error text,
+  checked_at timestamptz not null
+);
+
+create table if not exists endpoint_monitor_state (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  endpoint_id uuid not null references monitored_endpoints (id) on delete cascade,
+  last_ok integer,
+  consecutive_failures integer default 0,
+  last_status_code integer,
+  last_latency_ms real,
+  last_checked_at timestamptz,
+  last_error text,
+  primary key (user_id, endpoint_id)
+);
+
+create table if not exists endpoint_monitor_alerts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  endpoint_id uuid not null references monitored_endpoints (id) on delete cascade,
+  name text,
+  severity text,
+  title text,
+  description text,
+  kind text,
+  created_at timestamptz default now(),
+  resolution_status text default 'open',
+  resolved_at timestamptz
+);
+
+create index if not exists idx_ech_user_ep on endpoint_check_history (user_id, endpoint_id, checked_at);
+create index if not exists idx_ema_user on endpoint_monitor_alerts (user_id, created_at);
+
 -- Row Level Security
 alter table upload_sessions enable row level security;
 alter table api_logs enable row level security;
@@ -65,4 +122,18 @@ create policy "Users own api_logs" on api_logs
 create policy "Users own analysis_results" on analysis_results
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "Users own alerts" on alerts
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+alter table monitored_endpoints enable row level security;
+alter table endpoint_check_history enable row level security;
+alter table endpoint_monitor_state enable row level security;
+alter table endpoint_monitor_alerts enable row level security;
+
+create policy "Users own monitored_endpoints" on monitored_endpoints
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "Users own endpoint_check_history" on endpoint_check_history
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "Users own endpoint_monitor_state" on endpoint_monitor_state
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "Users own endpoint_monitor_alerts" on endpoint_monitor_alerts
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

@@ -81,3 +81,80 @@ export async function getHealth() {
   const r = await fetch(`${API_BASE}/api/health`, { cache: "no-store" });
   return r.json() as Promise<HealthInfo>;
 }
+
+export type MonitorSla = {
+  breached: boolean | null;
+  latency_ok: boolean | null;
+  uptime_ok: boolean | null;
+  max_latency_ms?: number;
+  min_uptime_pct?: number;
+};
+
+export type MonitoredEndpointView = {
+  id: string;
+  name: string;
+  url: string;
+  method: string;
+  enabled: boolean;
+  last_check: {
+    ok: boolean;
+    status_code: number | null;
+    latency_ms: number;
+    error?: string | null;
+    checked_at: string;
+  } | null;
+  consecutive_failures: number;
+  uptime_24h_pct: number | null;
+  sla: MonitorSla;
+  sparkline: number[];
+  config?: {
+    sla_max_latency_ms: number;
+    sla_min_uptime_pct: number;
+    failure_threshold: number;
+  };
+};
+
+export type EndpointMonitorAlert = {
+  id: string;
+  endpoint_id: string;
+  name: string | null;
+  severity: string;
+  title: string | null;
+  description: string | null;
+  kind: string | null;
+  created_at: string;
+  resolution_status: string;
+  resolved_at: string | null;
+};
+
+export type EndpointMonitorsResponse = {
+  ok: boolean;
+  endpoints: MonitoredEndpointView[];
+  alerts: EndpointMonitorAlert[];
+  checked_at?: string;
+  error?: string;
+};
+
+export async function getEndpointMonitors(refresh = true) {
+  const r = await apiGet(
+    `/api/endpoint-monitors?refresh=${refresh ? "true" : "false"}`,
+  );
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(t || r.statusText);
+  }
+  return r.json() as Promise<EndpointMonitorsResponse>;
+}
+
+export async function patchMonitoredEndpoint(
+  id: string,
+  body: Record<string, unknown>,
+) {
+  return apiPatch(`/api/endpoint-monitors/${id}`, body);
+}
+
+export async function patchEndpointMonitorAlert(id: string) {
+  return apiPatch(`/api/endpoint-monitors/monitor-alerts/${id}`, {
+    resolution_status: "resolved",
+  });
+}
