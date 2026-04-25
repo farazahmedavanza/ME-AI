@@ -31,6 +31,7 @@ from models import (
 import store as store_mod
 from store import get_store
 from store.local_store import new_id
+from store.supabase_store import SupabaseStore
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -94,14 +95,9 @@ def _ensure_alerts(
 def api_health() -> HealthResponse:
     s = get_settings()
     st = get_store()
-    h = st.health() if hasattr(st, "health") else {}
-    if h.get("store") == "supabase":
-        store_name = "supabase"
-    elif s.force_local_store or not s.use_supabase:
-        store_name = "local"
-    else:
-        store_name = "local"
-    ai = "openrouter" if s.openrouter_api_key else "local"
+    # Active store class is the source of truth (avoids stale store name from dict health()).
+    store_name = "supabase" if isinstance(st, SupabaseStore) else "local"
+    ai = "openrouter" if (s.openrouter_api_key or "").strip() else "local"
     return HealthResponse(
         store=store_name,
         ai=ai,

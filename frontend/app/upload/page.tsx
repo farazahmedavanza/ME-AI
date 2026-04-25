@@ -12,7 +12,9 @@ export default function UploadPage() {
       <div className="mb-6 text-xs font-bold uppercase text-blue-500">BANKING</div>
       <h1 className="text-lg font-medium text-slate-200">Upload API logs</h1>
       <p className="mt-1 text-sm text-slate-500">
-        JSON array of log objects (see <code className="text-slate-400">backend/data/api_logs.json</code>).
+        Upload a <span className="text-slate-300">JSON array</span> of log objects, or a{" "}
+        <span className="text-slate-300">text / Rdv / .log</span> file (see{" "}
+        <code className="text-slate-400">backend/data/api_logs.json</code> for JSON shape).
       </p>
       <div className="mt-4">
         <LogUpload

@@ -69,12 +69,12 @@ class Settings(BaseModel):
 @lru_cache
 def get_settings() -> Settings:
     d: dict[str, Any] = {
-        "openrouter_api_key": os.getenv("OPENROUTER_API_KEY", ""),
+        "openrouter_api_key": (os.getenv("OPENROUTER_API_KEY", "") or "").strip(),
         "openrouter_model": os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.1-8b-instruct:free"),
         "openrouter_timeout_s": float(os.getenv("OPENROUTER_TIMEOUT_S", "12")),
-        "supabase_url": os.getenv("SUPABASE_URL", ""),
-        "supabase_service_key": os.getenv("SUPABASE_KEY", ""),
-        "supabase_jwt_secret": os.getenv("SUPABASE_JWT_SECRET", ""),
+        "supabase_url": (os.getenv("SUPABASE_URL", "") or "").strip(),
+        "supabase_service_key": (os.getenv("SUPABASE_KEY", "") or "").strip(),
+        "supabase_jwt_secret": (os.getenv("SUPABASE_JWT_SECRET", "") or "").strip(),
         "use_local_store": _b("USE_LOCAL_STORE", False),
         "use_degraded_mode": _b("USE_DEGRADED_MODE", False),
         "store_auto_fallback": _b("STORE_AUTO_FALLBACK", True),

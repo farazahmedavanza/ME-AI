@@ -1,0 +1,161 @@
+﻿
+Opened file E:\Rendezvous\Logs\RdvRestService0330-1.log, log level Dump
+
+26/03/30 12:19:35.484|5|026|OnStop              |Application Stopped
+26/03/30 12:19:35.738|1|007|ReceiveMessage      |System.Threading.ThreadAbortException: Thread was being aborted.
+   at System.Messaging.Interop.UnsafeNativeMethods.MQReceiveMessage(MessageQueueHandle handle, UInt32 timeout, Int32 action, MQPROPS properties, NativeOverlapped* overlapped, ReceiveCallback receiveCallback, CursorHandle cursorHandle, IntPtr transaction)
+   at System.Messaging.MessageQueue.StaleSafeReceiveMessage(UInt32 timeout, Int32 action, MQPROPS properties, NativeOverlapped* overlapped, ReceiveCallback receiveCallback, CursorHandle cursorHandle, IntPtr transaction)
+   at System.Messaging.MessageQueue.ReceiveCurrent(TimeSpan timeout, Int32 action, CursorHandle cursor, MessagePropertyFilter filter, MessageQueueTransaction internalTransaction, MessageQueueTransactionType transactionType)
+   at System.Messaging.MessageQueue.Peek(TimeSpan timeout, Cursor cursor, PeekAction action)
+   at RdvRestService.QueueManager.ReceiveMessageBytes(MessageQueue mq, String& label, Int32 timeoutInSeconds, RdvLogger logger, UInt32 threadId)
+
+Opened file E:\Rendezvous\Logs\RdvRestService0330-1.log, log level Dump
+
+26/03/30 13:37:09.493|2|001|Main                |Adapter found https://10.1.18.41:11443, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.493|2|001|Main                |Adapter found http://127.0.0.1:8555/create_rim/api/create_rim, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.493|2|001|Main                |Adapter found http://10.23.0.29/create_account/api/create_account, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.493|2|001|Main                |Adapter found http://10.23.0.29/update_rim/api/update_rim, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.493|2|001|Main                |Adapter found http://10.1.20.23:8084/IHBOnBoarding, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.493|2|001|Main                |Adapter found http://10.1.18.41:11255, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.493|2|001|Main                |Adapter found http://10.23.0.29/osa_mt103_SIT/api/osa_mt103, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.493|2|001|Main                |Adapter found http://10.23.0.29/bcts_fetchaccountinfo_SIT/api/bcts_fetchaccountinfo, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.23.0.29/bcts_first_posting_uat/api/bcts_first_posting, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.23.0.29/bcts_final_posting_uat/api/bcts_final_posting, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://127.0.0.1:5100/bobf_payment_status/api/bobf_payment_status, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.23.0.29/bobf_domestic_payment_status/api/bobf_domestic_payment_status, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.23.0.29/bobf_domestic_posting/api/bobf_domestic_posting, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.23.0.29/bobf_os_mt103/api/bobf_os_mt103, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.23.0.29/bobf_payment_status/api/bobf_payment_status, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.1.18.89/bcts_fetchaccountinfo/api/bcts_fetchaccountinfo, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.23.0.29/bobf_get_acct_so/api/bobf_get_acct_so, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found https://10.1.18.41:1275, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found https://10.1.18.106:11442, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.23.0.29/kyc_rim_contact/api/kyc_rim_contact, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.23.0.29/wps_get_id_type_sit/api/wps_get_id_type, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.23.0.29/wps_get_id_type/api/wps_get_id_type, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.1.18.41:8555/icm_refresh_cmt/api/icm_refresh_cmt, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.1.18.41:8555/icm_refresh_ln/api/icm_refresh_ln, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.1.18.41:8555/icm_refresh_dp/api/icm_refresh_dp, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.1.18.41:8555/icm_refresh_cust/api/icm_refresh_cust, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://127.0.0.1:8555/bcts_first_posting_uat/api/bcts_first_posting, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.1.18.41:8555/onbrd_create_rim/api/onbrd_create_rim, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.23.0.29/get_kyc_info/api/get_kyc_info, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.1.18.41:8555/bcts_final_posting_uat/api/bcts_final_posting, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://10.1.18.41:8555/bcts_direct_posting_uat/api/bcts_direct_posting, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://127.0.0.1:1375, is_server 1, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.494|2|001|Main                |Adapter found http://127.0.0.1:8555/mcs_kyc_det/api/mcs_kyc_det, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found http://127.0.0.1:8555/cms_qlntxn/api/cms_qlntxn, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found http://127.0.0.1:8556/customer_get_kyc_dtls/api/customer_get_kyc_dtls, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found http://127.0.0.1:8555/rim_create_activate_update/api/rim_create_activate_update, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found http://127.0.0.1:8555/rim_update/api/rim_update, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found http://127.0.0.1:8555/cpr_restrict_acct/api/cpr_restrict_acct, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found http://10.1.18.89/lnrs_callback/api/lnrs_callback, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found http://127.0.0.1:8555/SN.Payments.API/PaymentsService.svc/CheckPayment, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found https://127.0.0.1:8046/SN.Payments.API/PaymentsService.svc/UpdatePaymentStatus, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found https://127.0.0.1:8554/SN.Payments.API/PaymentsService.svc/CheckPayment, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found https://192.168.101.239:8003/SN.Payments.API/PaymentsService.svc/SubmitPayment, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found https://10.1.18.52:8081/sec/uat/wathiq/login, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found https://10.1.18.52:8081/sec/uat/wathiq/API/EKYC/getCurrentKYCData, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found https://10.1.18.52:8081/sec/uat/wathiq/API/EKYC/recordConsentAndFetchSourceData, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found https://10.1.18.52:8081/sec/uat/wathiq/API/EKYC/publishSignedCase, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found https://10.1.18.52:8081/sec/uat/wathiq/API/core/upload, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found http://localhost:8781/Payments/login, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found http://localhost:8781/Payments/getCurrentKYCData, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found https://10.1.18.52:8082/sec/uat/wathiq/API/EKYC/recordConsentAndFetchSourceData, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found http://localhost:8781/Payments/publishSignedCase, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found http://localhost:8781/Payments/upload, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found http://localhost:8781/Payments/recordConsentAndFetchSourceData, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found http://127.0.0.1:8555/Payments/getAccounts, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found https://bankapi_.test-benefitpay.bh:443/ext/v1/accounts/getAccounts, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found https://bankapi.test-benefitpay.bh/wallet/ext/v1/accounts/getAccounts, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found http://bankapi.test-benefitpay.bh/wallet/ext/v1/accounts/getAccounts, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found http://casarray.bbk.bh:25/SendEmail, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found https://10.1.18.52:8081/sec/uat/cas/ext/v1/cas/iban-directories/register, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found https://10.1.18.52:8081/sec/uat/cas/ext/v1/cas/iban-directories/inquire, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found https://10.1.18.52:8081/sec/uat/cas/ext/v1/cas/iban-directories/status, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.495|2|001|Main                |Adapter found https://10.1.18.52:8081/sec/uat/cas/ext/v1/cas/iban-directories/update-instrument-customer, is_server 0, translation queue mtQueue, codepage 65001
+26/03/30 13:37:09.500|5|005|OnStart             |Application Started
+26/03/30 13:37:09.513|1|007|MainThreadProc      |pair keyhttp://127.0.0.1:1375 ,Pair value RdvRestService.AdapterSettings
+26/03/30 13:37:38.717|2|009|RequestThreadProc   |Got Message, Message Label [http://127.0.0.1:8555/rim_create_activate_update/api/rim_create_activate_update]
+26/03/30 13:37:38.717|2|009|RequestThreadProc   |Dirty Logging 1 [http://127.0.0.1:8555/rim_create_activate_update/api/rim_create_activate_update]
+26/03/30 13:37:38.717|2|009|RequestThreadProc   |Dirty Logging 1 [http+127.0.0.1:8555+8555]
+26/03/30 13:37:38.717|1|009|RequestThreadProc   |Going adapter info for [http://127.0.0.1:8555]
+26/03/30 13:37:38.752|4|009|Invoke              |Is Crash Here
+26/03/30 13:37:38.770|4|009|Invoke              |Message Id is [8BFE043D-233E-43E5-BD38-77D34B71A5B7]
+26/03/30 13:37:38.770|4|009|MainThreadProc      |ENVIRONMENT DEVELOPMENT 
+26/03/30 13:37:38.770|7|009|Invoke              |Rest Request Message: [<?xml version="1.0"?>
+<NewCustomerRimCreationGCC><RdvMessageId>B29182E5-0BF1-482E-AA64-1F11FC77E136</RdvMessageId><RdvMethod>POST</RdvMethod><sex>M</sex><first_name>ABDULRAHMAN</first_name><last_name>ALKAWARI</last_name><phone_1>97332327721</phone_1><phone_3>97332327721</phone_3><email_addr_1>alkuwari23@icloud.com</email_addr_1><birth_dt>20000623</birth_dt><birth_country>BHR</birth_country><birth_city>Muharraq</birth_city><ident_id>CPR</ident_id><id_value>000607573</id_value><id_issue_dt>20200902</id_issue_dt><id_expiry_dt>20300902</id_expiry_dt><ident2_id>Passport</ident2_id><id2_value>3172137</id2_value><id2_issue_dt>20200902</id2_issue_dt><id2_expiry_dt>20311208</id2_expiry_dt><marital_status>Unmarried</marital_status><nat_id>0</nat_id><education_id></education_id><employer_name></employer_name><monthly_income>1330</monthly_income><addr_line_1>BLDG 3986, ROAD 2855, BLOCK 228</addr_line_1><city_id1>544</city_id1><addr_line_2></addr_line_2><city_id2></city_id2><crs_tin1>N</crs_tin1><crs_tin2>N</crs_tin2><crs_tin3>N</crs_tin3><tax_res_country1>Bahrain</tax_res_country1><tax_res_country2></tax_res_country2><tax_res_country3></tax_res_country3><us_status>Non US Person</us_status><peps>N</peps><us_tins></us_tins><doc_status>N</doc_status><ContentType>application/json</ContentType><api_ref_key>aHsZnHbDkBUKlvt2D6IDTsW7Aa04NL</api_ref_key><middle_name>MAJED A.RAHMAN ALMUQLA</middle_name><residency>Hello</residency><branch>50</branch><rsm1>2573</rsm1><rsm2>2573</rsm2><class_code>10</class_code><sic_code>800</sic_code><acct_activity>Local</acct_activity><business_nature></business_nature><annual_turn_id></annual_turn_id><month_expense>1</month_expense><employment_status>WORKING</employment_status><opening_reason_id>16</opening_reason_id><ekyc_consent_dt>20260222</ekyc_consent_dt><src_fnds_1>Salary</src_fnds_1><res_permit_no></res_permit_no><res_permit_exp_dt>19000101</res_permit_exp_dt><place_of_birth>Muharraq</place_of_birth><cust_profile>Online</cust_profile><phone_2></phone_2><fax></fax><email_addr_2></email_addr_2><id_issue_country></id_issue_country><id2_issue_country></id2_issue_country><income_crncy>BHD</income_crncy><employer_code></employer_code><employer_address></employer_address><occupation_id>12089</occupation_id><category_id></category_id><position_id></position_id><org_type></org_type><addr_country_code>BHR</addr_country_code><src_fnds_2></src_fnds_2><src_fnds_3></src_fnds_3><additional_occupation></additional_occupation><has_subsidy>No</has_subsidy><individual_business_activity>Other</individual_business_activity><china_ref></china_ref><isiC4></isiC4><employee_id>2861</employee_id><version>2</version><entity_code>BHR</entity_code></NewCustomerRimCreationGCC>
+]
+26/03/30 13:37:38.770|4|009|Invoke              |RdvMessageId is B29182E5-0BF1-482E-AA64-1F11FC77E136
+26/03/30 13:37:38.771|4|009|Invoke              |RdvMethod is POST
+26/03/30 13:37:38.771|4|009|Invoke              |Test 1 
+26/03/30 13:37:38.771|4|009|Invoke              |Test 1 POST
+26/03/30 13:37:38.773|6|001|PreparePostRequest  |documents Count : 0
+26/03/30 13:37:38.774|6|001|PreparePostRequest  |in side recordConsentAndFetchSourceData2: recordConsentAndFetchSourceData
+26/03/30 13:37:38.907|4|009|Invoke              |Document Name: [NewCustomerRimCreationGCC]
+26/03/30 13:37:38.912|7|009|PostRequest         |Here we are
+26/03/30 13:37:38.913|4|009|PostRequest         |Post Request Method: POST, RequestUri: 'http://127.0.0.1:8555/rim_create_activate_update/api/rim_create_activate_update', Version: 1.1, Content: System.Net.Http.StringContent, Headers:
+{
+  Content-Type: application/json; charset=utf-8
+}
+{"sex":"M","first_name":"ABDULRAHMAN","last_name":"ALKAWARI","phone_1":"97332327721","phone_3":"97332327721","email_addr_1":"alkuwari23@icloud.com","birth_dt":"20000623","birth_country":"BHR","birth_city":"Muharraq","ident_id":"CPR","id_value":"000607573","id_issue_dt":"20200902","id_expiry_dt":"20300902","ident2_id":"Passport","id2_value":"3172137","id2_issue_dt":"20200902","id2_expiry_dt":"20311208","marital_status":"Unmarried","nat_id":"0","education_id":"","employer_name":"","monthly_income":"1330","addr_line_1":"BLDG 3986, ROAD 2855, BLOCK 228","city_id1":"544","addr_line_2":"","city_id2":"","crs_tin1":"N","crs_tin2":"N","crs_tin3":"N","tax_res_country1":"Bahrain","tax_res_country2":"","tax_res_country3":"","us_status":"Non US Person","peps":"N","us_tins":"","doc_status":"N","ContentType":"application/json","api_ref_key":"aHsZnHbDkBUKlvt2D6IDTsW7Aa04NL","middle_name":"MAJED A.RAHMAN ALMUQLA","residency":"Hello","branch":"50","rsm1":"2573","rsm2":"2573","class_code":"10","sic_code":"800","acct_activity":"Local","business_nature":"","annual_turn_id":"","month_expense":"1","employment_status":"WORKING","opening_reason_id":"16","ekyc_consent_dt":"20260222","src_fnds_1":"Salary","res_permit_no":"","res_permit_exp_dt":"19000101","place_of_birth":"Muharraq","cust_profile":"Online","phone_2":"","fax":"","email_addr_2":"","id_issue_country":"","id2_issue_country":"","income_crncy":"BHD","employer_code":"","employer_address":"","occupation_id":"12089","category_id":"","position_id":"","org_type":"","addr_country_code":"BHR","src_fnds_2":"","src_fnds_3":"","additional_occupation":"","has_subsidy":"No","individual_business_activity":"Other","china_ref":"","isiC4":"","employee_id":"2861","version":"2","entity_code":"BHR"}
+26/03/30 13:37:38.979|4|009|Invoke              |Response Header [ 
+OK OK
+Content-Type: application/json
+Content-Length:155
+Server:Server: Jetty(6.1.26)
+]
+26/03/30 13:37:38.979|6|009|Invoke              |Response Status [OK]
+26/03/30 13:37:38.979|4|009|Invoke              |Response Body [{
+  "api_ref_key":" Test_rim_0001",
+  "phx_tran_id":"9783282",
+  "error_number":null, 
+  "error_text":null,
+  "rim_no":"70699256",
+  "tin":"99910699257"
+}
+]
+26/03/30 13:37:39.031|7|009|Invoke              |Rest Response Message: [<NewCustomerRimCreationGCCResponse><api_ref_key> Test_rim_0001</api_ref_key><phx_tran_id>9783282</phx_tran_id><error_number /><error_text /><rim_no>70699256</rim_no><tin>99910699257</tin><RdvStatusCode>200</RdvStatusCode><RdvMethod>POST</RdvMethod><RdvMessageId>B29182E5-0BF1-482E-AA64-1F11FC77E136</RdvMessageId></NewCustomerRimCreationGCCResponse>]
+26/03/30 13:37:39.044|4|009|Invoke              |Message sent to MT Queue
+26/03/30 13:37:39.044|2|009|RequestThreadProc   |Message Processed
+26/03/30 13:41:29.457|2|009|RequestThreadProc   |Got Message, Message Label [http://127.0.0.1:8555/rim_update/api/rim_update]
+26/03/30 13:41:29.457|2|009|RequestThreadProc   |Dirty Logging 1 [http://127.0.0.1:8555/rim_update/api/rim_update]
+26/03/30 13:41:29.457|2|009|RequestThreadProc   |Dirty Logging 1 [http+127.0.0.1:8555+8555]
+26/03/30 13:41:29.457|1|009|RequestThreadProc   |Going adapter info for [http://127.0.0.1:8555]
+26/03/30 13:41:29.457|4|009|Invoke              |Is Crash Here
+26/03/30 13:41:29.457|4|009|Invoke              |Message Id is [B4BFFE36-0CAA-4769-9250-07A669B62E96]
+26/03/30 13:41:29.457|4|009|MainThreadProc      |ENVIRONMENT DEVELOPMENT 
+26/03/30 13:41:29.457|7|009|Invoke              |Rest Request Message: [<?xml version="1.0"?>
+<CustomerRimUpdationGCC><RdvMessageId>57EEB66F-2C50-4FFD-AF8A-9E7E8BE241E8</RdvMessageId><RdvMethod>POST</RdvMethod><rim_no>70699256</rim_no><sex>M</sex><first_name>KARRAR</first_name><last_name>EBRAHIM</last_name><phone_1>33512147</phone_1><phone_3>33512147</phone_3><email_addr_1>karraralimohammed@gmail.com</email_addr_1><birth_dt>20001121</birth_dt><birth_country>IRQ</birth_country><birth_city>Unknown</birth_city><ident_id>CPR</ident_id><id_value>001112040</id_value><id_issue_dt>20200424</id_issue_dt><id_expiry_dt>20300424</id_expiry_dt><ident2_id>Passport</ident2_id><id2_value>B0178163</id2_value><id2_issue_dt>20200424</id2_issue_dt><id2_expiry_dt>20340722</id2_expiry_dt><marital_status>Unmarried</marital_status><nat_id>0</nat_id><education_id></education_id><employer_name>NA</employer_name><monthly_income>100</monthly_income><addr_line_1>Flat 1, BLDG 1685, ROAD 3353, BLOCK 633</addr_line_1><city_id1></city_id1><addr_line_2></addr_line_2><city_id2></city_id2><crs_tin1>N</crs_tin1><crs_tin2>N</crs_tin2><crs_tin3>N</crs_tin3><tax_res_country1>Bahrain</tax_res_country1><tax_res_country2></tax_res_country2><tax_res_country3></tax_res_country3><us_status>Non US Person</us_status><peps>N</peps><us_tins></us_tins><doc_status>N</doc_status><api_ref_key>38df7ed7-fbfe-499a-8745-7f1adbfcdcfa</api_ref_key><middle_name>ALI M.</middle_name><acct_activity>Local</acct_activity><business_nature></business_nature><annual_turn_id></annual_turn_id><month_expense>5</month_expense><employment_status>WORKING</employment_status><opening_reason_id>40</opening_reason_id><ekyc_consent_dt>20260222</ekyc_consent_dt><src_fnds_1>Salary</src_fnds_1><res_permit_no></res_permit_no><res_permit_exp_dt>19000101</res_permit_exp_dt><place_of_birth>Unknown</place_of_birth><cust_profile>Online</cust_profile><class_code></class_code><phone_2></phone_2><fax></fax><email_addr_2></email_addr_2><id_issue_country></id_issue_country><id2_issue_country></id2_issue_country><income_crncy>BHD</income_crncy><employer_code></employer_code><employer_address>NA</employer_address><occupation_id>12089</occupation_id><category_id></category_id><position_id></position_id><org_type></org_type><addr_country_code>BHR</addr_country_code><src_fnds_2></src_fnds_2><src_fnds_3></src_fnds_3><additional_occupation></additional_occupation><has_subsidy>No</has_subsidy><individual_business_activity>Other</individual_business_activity><china_ref></china_ref><isiC4></isiC4><employee_id>2861</employee_id><version>2</version><entity_code>BHR</entity_code></CustomerRimUpdationGCC>
+]
+26/03/30 13:41:29.457|4|009|Invoke              |RdvMessageId is 57EEB66F-2C50-4FFD-AF8A-9E7E8BE241E8
+26/03/30 13:41:29.457|4|009|Invoke              |RdvMethod is POST
+26/03/30 13:41:29.457|4|009|Invoke              |Test 1 
+26/03/30 13:41:29.457|4|009|Invoke              |Test 1 POST
+26/03/30 13:41:29.458|6|001|PreparePostRequest  |documents Count : 0
+26/03/30 13:41:29.458|6|001|PreparePostRequest  |in side recordConsentAndFetchSourceData2: recordConsentAndFetchSourceData
+26/03/30 13:41:29.458|4|009|Invoke              |Document Name: [CustomerRimUpdationGCC]
+26/03/30 13:41:29.458|7|009|PostRequest         |Here we are
+26/03/30 13:41:29.458|4|009|PostRequest         |Post Request Method: POST, RequestUri: 'http://127.0.0.1:8555/rim_update/api/rim_update', Version: 1.1, Content: System.Net.Http.StringContent, Headers:
+{
+  Content-Type: application/json; charset=utf-8
+}
+{"rim_no":"70699256","sex":"M","first_name":"KARRAR","last_name":"EBRAHIM","phone_1":"33512147","phone_3":"33512147","email_addr_1":"karraralimohammed@gmail.com","birth_dt":"20001121","birth_country":"IRQ","birth_city":"Unknown","ident_id":"CPR","id_value":"001112040","id_issue_dt":"20200424","id_expiry_dt":"20300424","ident2_id":"Passport","id2_value":"B0178163","id2_issue_dt":"20200424","id2_expiry_dt":"20340722","marital_status":"Unmarried","nat_id":"0","education_id":"","employer_name":"NA","monthly_income":"100","addr_line_1":"Flat 1, BLDG 1685, ROAD 3353, BLOCK 633","city_id1":"","addr_line_2":"","city_id2":"","crs_tin1":"N","crs_tin2":"N","crs_tin3":"N","tax_res_country1":"Bahrain","tax_res_country2":"","tax_res_country3":"","us_status":"Non US Person","peps":"N","us_tins":"","doc_status":"N","api_ref_key":"38df7ed7-fbfe-499a-8745-7f1adbfcdcfa","middle_name":"ALI M.","acct_activity":"Local","business_nature":"","annual_turn_id":"","month_expense":"5","employment_status":"WORKING","opening_reason_id":"40","ekyc_consent_dt":"20260222","src_fnds_1":"Salary","res_permit_no":"","res_permit_exp_dt":"19000101","place_of_birth":"Unknown","cust_profile":"Online","class_code":"","phone_2":"","fax":"","email_addr_2":"","id_issue_country":"","id2_issue_country":"","income_crncy":"BHD","employer_code":"","employer_address":"NA","occupation_id":"12089","category_id":"","position_id":"","org_type":"","addr_country_code":"BHR","src_fnds_2":"","src_fnds_3":"","additional_occupation":"","has_subsidy":"No","individual_business_activity":"Other","china_ref":"","isiC4":"","employee_id":"2861","version":"2","entity_code":"BHR"}
+26/03/30 13:41:29.464|4|009|Invoke              |Response Header [ 
+OK OK
+Content-Type: application/json
+Content-Length:132
+Server:Server: Jetty(6.1.26)
+]
+26/03/30 13:41:29.464|6|009|Invoke              |Response Status [OK]
+26/03/30 13:41:29.465|4|009|Invoke              |Response Body [{
+  "api_ref_key":" Test_rim_0001",
+  "phx_tran_id":"9783282",
+  "error_number":null, 
+  "error_text":null,
+  "rim_no":"10699255"
+}
+]
+26/03/30 13:41:29.465|7|009|Invoke              |Rest Response Message: [<CustomerRimUpdationGCCResponse><api_ref_key> Test_rim_0001</api_ref_key><phx_tran_id>9783282</phx_tran_id><error_number /><error_text /><rim_no>10699255</rim_no><RdvStatusCode>200</RdvStatusCode><RdvMethod>POST</RdvMethod><RdvMessageId>57EEB66F-2C50-4FFD-AF8A-9E7E8BE241E8</RdvMessageId></CustomerRimUpdationGCCResponse>]
+26/03/30 13:41:29.467|4|009|Invoke              |Message sent to MT Queue
+26/03/30 13:41:29.467|2|009|RequestThreadProc   |Message Processed
