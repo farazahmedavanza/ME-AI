@@ -230,7 +230,8 @@ class LocalStore:
                     (session_id, user_id, filename, now, len(log_rows), "completed"),
                 )
                 for row in log_rows:
-                    lid = str(row.get("id") or new_id())
+                    # Always a fresh PK: client JSON ids often match seeded/sample logs and collide globally.
+                    lid = new_id()
                     raw = json.dumps(row, default=str)
                     c.execute(
                         "INSERT INTO api_logs (id, session_id, user_id, log_timestamp, endpoint, method, status_code, "

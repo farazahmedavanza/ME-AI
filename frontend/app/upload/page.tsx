@@ -20,8 +20,9 @@ export default function UploadPage() {
       </p>
       <div className="mt-4">
         <LogUpload
-          onDone={() => {
-            router.push("/dashboard");
+          onDone={(sid) => {
+            const q = sid ? `?session=${encodeURIComponent(sid)}` : "";
+            router.push(`/dashboard${q}`);
             router.refresh();
           }}
         />

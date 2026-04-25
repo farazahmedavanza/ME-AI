@@ -179,7 +179,8 @@ export function DashboardClient() {
           No log session yet. Start the API and wait for seed, or upload JSON.
         </p>
         <LogUpload
-          onDone={() => {
+          onDone={(sid) => {
+            if (sid) onSessionChange(sid);
             void load();
             setToast({ msg: "Logs uploaded. Dashboard refreshed.", kind: "success" });
           }}
@@ -287,7 +288,8 @@ export function DashboardClient() {
       </div>
       <div className="grid max-w-md gap-2 text-xs" id="settings">
         <LogUpload
-          onDone={() => {
+          onDone={(sid) => {
+            if (sid) onSessionChange(sid);
             void load();
             setToast({ msg: "Upload complete. Session list updated.", kind: "success" });
           }}

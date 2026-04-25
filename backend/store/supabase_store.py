@@ -120,7 +120,7 @@ class SupabaseStore:
         ).execute()
         batch: list[dict[str, Any]] = []
         for row in log_rows:
-            rid = str(row.get("id") or new_id())
+            rid = new_id()
             batch.append(
                 {
                     "id": rid,

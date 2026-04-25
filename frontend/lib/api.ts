@@ -1,6 +1,38 @@
-const API_BASE =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL) ||
-  "http://127.0.0.1:8000";
+/**
+ * Browser: for localhost / 127.0.0.1 backends, use same-origin `/api/*` so Next
+ * rewrites avoid CORS and hostname mismatches. Otherwise use NEXT_PUBLIC_API_URL.
+ * Server: call the backend directly (rewrites only apply to incoming browser requests).
+ */
+function serverApiBase(): string {
+  const fromEnv = (process.env.NEXT_PUBLIC_API_URL || "").trim().replace(/\/$/, "");
+  return (
+    (process.env.BACKEND_URL || "").trim().replace(/\/$/, "") ||
+    (process.env.INTERNAL_API_URL || "").trim().replace(/\/$/, "") ||
+    fromEnv ||
+    "http://127.0.0.1:8000"
+  );
+}
+
+function clientApiBase(): string {
+  const fromEnv = (process.env.NEXT_PUBLIC_API_URL || "").trim().replace(/\/$/, "");
+  if (!fromEnv) return "";
+  try {
+    const host = new URL(fromEnv).hostname;
+    if (host === "localhost" || host === "127.0.0.1") {
+      return "";
+    }
+  } catch {
+    return fromEnv;
+  }
+  return fromEnv;
+}
+
+function apiBaseForFetch(): string {
+  if (typeof window !== "undefined") {
+    return clientApiBase();
+  }
+  return serverApiBase();
+}
 
 const TOKEN_KEY = "avanza_ops_token";
 
@@ -15,7 +47,7 @@ export function setToken(t: string) {
 }
 
 export async function fetchToken() {
-  const r = await fetch(`${API_BASE}/api/auth/token`, { method: "POST" });
+  const r = await fetch(`${apiBaseForFetch()}/api/auth/token`, { method: "POST" });
   if (!r.ok) throw new Error("Could not get token");
   const d = (await r.json()) as { access_token: string };
   setToken(d.access_token);
@@ -25,13 +57,13 @@ export async function fetchToken() {
 export async function apiGet(path: string) {
   let tok = getToken();
   if (!tok) tok = await fetchToken();
-  const r = await fetch(`${API_BASE}${path}`, {
+  const r = await fetch(`${apiBaseForFetch()}${path}`, {
     headers: { Authorization: `Bearer ${tok}` },
     cache: "no-store",
   });
   if (r.status === 401) {
     tok = await fetchToken();
-    return fetch(`${API_BASE}${path}`, {
+    return fetch(`${apiBaseForFetch()}${path}`, {
       headers: { Authorization: `Bearer ${tok}` },
       cache: "no-store",
     }).then((x) => x);
@@ -42,7 +74,7 @@ export async function apiGet(path: string) {
 export async function apiPost(path: string, body: unknown) {
   let tok = getToken();
   if (!tok) tok = await fetchToken();
-  return fetch(`${API_BASE}${path}`, {
+  return fetch(`${apiBaseForFetch()}${path}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${tok}`,
@@ -55,7 +87,7 @@ export async function apiPost(path: string, body: unknown) {
 export async function apiPatch(path: string, body: unknown) {
   let tok = getToken();
   if (!tok) tok = await fetchToken();
-  return fetch(`${API_BASE}${path}`, {
+  return fetch(`${apiBaseForFetch()}${path}`, {
     method: "PATCH",
     headers: {
       Authorization: `Bearer ${tok}`,
@@ -68,13 +100,13 @@ export async function apiPatch(path: string, body: unknown) {
 export async function apiDelete(path: string) {
   let tok = getToken();
   if (!tok) tok = await fetchToken();
-  let r = await fetch(`${API_BASE}${path}`, {
+  let r = await fetch(`${apiBaseForFetch()}${path}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${tok}` },
   });
   if (r.status === 401) {
     tok = await fetchToken();
-    r = await fetch(`${API_BASE}${path}`, {
+    r = await fetch(`${apiBaseForFetch()}${path}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${tok}` },
     });
@@ -83,7 +115,7 @@ export async function apiDelete(path: string) {
 }
 
 export function apiBase() {
-  return API_BASE;
+  return apiBaseForFetch();
 }
 
 export type HealthInfo = {
@@ -95,7 +127,7 @@ export type HealthInfo = {
 };
 
 export async function getHealth() {
-  const r = await fetch(`${API_BASE}/api/health`, { cache: "no-store" });
+  const r = await fetch(`${apiBaseForFetch()}/api/health`, { cache: "no-store" });
   return r.json() as Promise<HealthInfo>;
 }
 

@@ -7,12 +7,18 @@ import {
   parseUploadJsonFile,
 } from "@/lib/log-upload-parsers";
 
-export function LogUpload({ onDone }: { onDone: () => void }) {
+export function LogUpload({
+  onDone,
+}: {
+  onDone?: (sessionId?: string) => void;
+}) {
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   async function postLogs(filename: string, logs: Record<string, unknown>[]) {
     const r = await apiPost("/api/upload-logs", { filename, logs });
     if (!r.ok) throw new Error(await r.text());
+    const d = (await r.json()) as { session_id?: string };
+    return d.session_id;
   }
 
   return (
@@ -43,9 +49,9 @@ export function LogUpload({ onDone }: { onDone: () => void }) {
             try {
               const text = await f.text();
               const logs = parseUploadJsonFile(text);
-              await postLogs(f.name, logs);
+              const sid = await postLogs(f.name, logs);
               setMsg("JSON upload successful.");
-              onDone();
+              onDone?.(sid);
             } catch (err) {
               setMsg(err instanceof Error ? err.message : "Upload failed");
             } finally {
@@ -85,10 +91,10 @@ export function LogUpload({ onDone }: { onDone: () => void }) {
                 e.target.value = "";
                 return;
               }
-              await postLogs(f.name, logs);
+              const sid = await postLogs(f.name, logs);
               const extra = warnings.length ? ` ${warnings.join(" ")}` : "";
               setMsg(`Upload successful (${logs.length} row(s)).${extra}`);
-              onDone();
+              onDone?.(sid);
             } catch (err) {
               setMsg(err instanceof Error ? err.message : "Upload failed");
             } finally {
