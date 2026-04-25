@@ -22,6 +22,29 @@ export async function fetchToken() {
   return d.access_token;
 }
 
+/** SQLite-backed local store only; uses demo@me-ai.local in seed data. */
+export async function loginWithEmailPassword(email: string, password: string) {
+  const r = await fetch(`${API_BASE}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!r.ok) {
+    let msg = "Login failed";
+    try {
+      const j = (await r.json()) as { detail?: string | string[] };
+      const d = j.detail;
+      msg = Array.isArray(d) ? d.join(", ") : d || msg;
+    } catch {
+      msg = (await r.text()) || msg;
+    }
+    throw new Error(msg);
+  }
+  const d = (await r.json()) as { access_token: string };
+  setToken(d.access_token);
+  return d.access_token;
+}
+
 export async function apiGet(path: string) {
   let tok = getToken();
   if (!tok) tok = await fetchToken();

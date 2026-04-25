@@ -1,8 +1,4 @@
--- API Health & SLA Monitor — database definition (mirrors supabase/migrations/20250425120000_me_ai_init.sql).
--- Remote: `supabase db push` after `supabase link`, or paste this in the SQL Editor.
--- Auth demo users (password DemoME2026!): demo@me-ai.local, ops@me-ai.local — run:
---   python backend/scripts/seed_supabase_auth.py
--- (requires SUPABASE_URL + service role SUPABASE_KEY in backend/.env)
+-- ME-AI: profiles, app tables, RLS, auth trigger. Apply via: supabase db push (or SQL Editor on remote).
 
 -- App profile (one row per auth.users; links app data to Supabase Auth identities)
 create table if not exists public.profiles (
@@ -100,7 +96,6 @@ create table if not exists alerts (
 create index if not exists idx_api_logs_session on api_logs(session_id);
 create index if not exists idx_alerts_session on alerts(session_id);
 
--- HTTP endpoint configuration & live monitor (CRUD via /api/endpoint-monitors; backend uses service role)
 create table if not exists monitored_endpoints (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
@@ -157,7 +152,6 @@ create table if not exists endpoint_monitor_alerts (
 create index if not exists idx_ech_user_ep on endpoint_check_history (user_id, endpoint_id, checked_at);
 create index if not exists idx_ema_user on endpoint_monitor_alerts (user_id, created_at);
 
--- Row Level Security
 alter table upload_sessions enable row level security;
 alter table api_logs enable row level security;
 alter table analysis_results enable row level security;

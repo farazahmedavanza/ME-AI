@@ -9,10 +9,12 @@ export function AvanzaBrandLogo({
   className,
   size = "md",
   priority = false,
+  centered = false,
 }: {
   className?: string;
   size?: keyof typeof heights;
   priority?: boolean;
+  centered?: boolean;
 }) {
   const h = heights[size];
   return (
@@ -21,7 +23,11 @@ export function AvanzaBrandLogo({
       alt="Avanza Solutions"
       width={220}
       height={h}
-      className={cn("h-auto w-auto max-w-full object-contain object-left", className)}
+      className={cn(
+        "h-auto w-auto max-w-full object-contain",
+        centered ? "object-center mx-auto" : "object-left",
+        className
+      )}
       style={{ height: h, width: "auto" }}
       priority={priority}
     />
