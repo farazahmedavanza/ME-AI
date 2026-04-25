@@ -24,10 +24,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <aside className="w-56 shrink-0 border-r border-avline bg-slate-950/80 p-3">
-        <div className="px-1 py-2">
-          <Link href="/dashboard" className="block outline-offset-2 hover:opacity-90">
-            <AvanzaBrandLogo size="md" />
+        <div className="flex flex-col items-center px-1 py-2 text-center">
+          <Link href="/dashboard" className="outline-offset-2 hover:opacity-90">
+            <AvanzaBrandLogo size="md" centered />
           </Link>
+          <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+            ME AI
+          </div>
         </div>
         <nav className="mt-2 space-y-0.5">
           {nav.map((n) => {

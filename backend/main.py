@@ -41,7 +41,7 @@ from models import (
 )
 import store as store_mod
 from store import get_store
-from store.local_store import new_id
+from store.local_store import LocalStore, new_id
 from store.supabase_store import SupabaseStore
 
 logging.basicConfig(level=logging.INFO)
@@ -140,6 +140,11 @@ class DevLoginBody(BaseModel):
     password: str | None = None
 
 
+class LocalLoginBody(BaseModel):
+    email: str
+    password: str
+
+
 @app.post("/api/auth/dev-login", response_model=DevLoginResponse)
 def dev_login(body: DevLoginBody | None = None) -> DevLoginResponse:
     s = get_settings()
@@ -147,6 +152,21 @@ def dev_login(body: DevLoginBody | None = None) -> DevLoginResponse:
         raise HTTPException(404, "Demo login disabled")
     token = issue_local_token()
     return DevLoginResponse(access_token=token)
+
+
+@app.post("/api/auth/login", response_model=DevLoginResponse)
+def local_store_login(body: LocalLoginBody) -> DevLoginResponse:
+    """Email + password against SQLite `users` when using the local store."""
+    st = get_store()
+    if not isinstance(st, LocalStore):
+        raise HTTPException(
+            400,
+            "Local email login only when the API uses SQLite (local store), not Supabase",
+        )
+    uid = st.verify_user_login(body.email, body.password)
+    if not uid:
+        raise HTTPException(401, "Invalid email or password")
+    return DevLoginResponse(access_token=issue_local_token(uid))
 
 
 @app.post("/api/auth/token")

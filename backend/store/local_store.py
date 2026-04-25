@@ -11,6 +11,21 @@ from uuid import uuid4
 
 from config import Settings
 
+# Precomputed PBKDF2, password: DemoME2026! (see auth.verify_password)
+_DEMO_1 = (
+    "pbkdf2_sha256$100000$0123456789abcdef0123456789abcdef$"
+    "3d3b36baacf1f7b35b926b04c1e851e351fc1886550e00637c8a54cdd5cc472f"
+)
+_DEMO_2 = (
+    "pbkdf2_sha256$100000$fedcba9876543210fedcba9876543210$"
+    "e4d7bd3f2d89b1acd2b6a1974f3b87fcc4b10093d9e7f57e88aff946574397e0"
+)
+# Seeded on every local DB init (upsert fixes wrong hashes from old INSERT OR IGNORE)
+LOCAL_DEMO_ACCOUNTS: tuple[tuple[str, str, str], ...] = (
+    ("00000000-0000-0000-0000-000000000001", "demo@me-ai.local", _DEMO_1),
+    ("00000000-0000-0000-0000-000000000002", "ops@me-ai.local", _DEMO_2),
+)
+DEMO_LOCAL_EMAIL = "demo@me-ai.local"
 
 def new_id() -> str:
     return str(uuid4())
@@ -113,6 +128,12 @@ CREATE TABLE IF NOT EXISTS endpoint_monitor_alerts (
 );
 CREATE INDEX IF NOT EXISTS idx_ech_user_ep ON endpoint_check_history(user_id, endpoint_id, checked_at);
 CREATE INDEX IF NOT EXISTS idx_ema_user ON endpoint_monitor_alerts(user_id, created_at);
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  password_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 """
 
 
@@ -135,12 +156,43 @@ class LocalStore:
             c = self._connect()
             try:
                 c.executescript(SCHEMA)
+                for uid, em, ph in LOCAL_DEMO_ACCOUNTS:
+                    c.execute(
+                        """
+                        INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)
+                        ON CONFLICT(id) DO UPDATE SET
+                          email = excluded.email,
+                          password_hash = excluded.password_hash
+                        """,
+                        (uid, em, ph),
+                    )
                 c.commit()
             finally:
                 c.close()
 
     def health(self) -> dict[str, Any]:
         return {"store": "local", "ok": True}
+
+    def verify_user_login(self, email: str, password: str) -> str | None:
+        from auth import verify_password
+
+        e = (email or "").strip().lower()
+        if not e or not password:
+            return None
+        c = self._connect()
+        try:
+            row = c.execute(
+                "SELECT id, password_hash FROM users WHERE lower(email) = ?",
+                (e,),
+            ).fetchone()
+            if not row:
+                return None
+            uid, ph = str(row[0]), str(row[1])
+            if verify_password(password, ph):
+                return uid
+        finally:
+            c.close()
+        return None
 
     def _seed_demo_if_empty(self) -> None:
         with self._lock:

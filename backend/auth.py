@@ -1,7 +1,10 @@
 """Auth: optional demo token, local JWT, or Supabase HS256 JWT."""
 from __future__ import annotations
 
+import hashlib
+import hmac
 import logging
+import secrets
 from typing import Annotated, Any
 
 import jwt
@@ -66,3 +69,26 @@ def issue_local_token(sub: str = DEMO_USER) -> str:
         s.jwt_secret,
         algorithm="HS256",
     )
+
+
+def hash_password(plain: str) -> str:
+    """PBKDF2 for SQLite-stored local users (not for production Supabase)."""
+    salt = secrets.token_bytes(16)
+    dk = hashlib.pbkdf2_hmac("sha256", plain.encode("utf-8"), salt, 100_000)
+    return f"pbkdf2_sha256$100000${salt.hex()}${dk.hex()}"
+
+
+def verify_password(plain: str, stored: str) -> bool:
+    if not stored or not stored.startswith("pbkdf2_sha256$100000$"):
+        return False
+    parts = stored.split("$", 3)
+    if len(parts) != 4:
+        return False
+    _, _iter, salt_hex, hash_hex = parts
+    try:
+        salt = bytes.fromhex(salt_hex)
+        expected = bytes.fromhex(hash_hex)
+    except ValueError:
+        return False
+    dk = hashlib.pbkdf2_hmac("sha256", plain.encode("utf-8"), salt, 100_000)
+    return hmac.compare_digest(dk, expected)
