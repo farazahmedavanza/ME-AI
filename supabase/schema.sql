@@ -114,7 +114,8 @@ create table if not exists monitored_endpoints (
   sla_max_latency_ms integer default 3000,
   sla_min_uptime_pct real default 99.0,
   failure_threshold integer default 2,
-  webhook_url text
+  webhook_url text,
+  alert_email text
 );
 
 create table if not exists endpoint_check_history (

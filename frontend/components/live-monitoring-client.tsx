@@ -41,6 +41,7 @@ const emptyForm: MonitorEndpointWriteBody = {
   sla_min_uptime_pct: 99,
   failure_threshold: 2,
   webhook_url: "",
+  alert_email: "",
 };
 
 function viewToForm(e: MonitoredEndpointView): MonitorEndpointWriteBody {
@@ -56,6 +57,7 @@ function viewToForm(e: MonitoredEndpointView): MonitorEndpointWriteBody {
     sla_min_uptime_pct: e.config?.sla_min_uptime_pct ?? 99,
     failure_threshold: e.config?.failure_threshold ?? 2,
     webhook_url: e.webhook_url ?? "",
+    alert_email: e.alert_email ?? "",
   };
 }
 
@@ -222,6 +224,20 @@ function EndpointFormFields({
           placeholder="https://…"
         />
       </label>
+      <label className="block text-xs text-slate-400 sm:col-span-2 lg:col-span-3">
+        Alert email (SLA / downtime; optional — system default if empty)
+        <input
+          type="email"
+          id={`${idPrefix}-alert-email`}
+          className="mt-1 w-full rounded border border-avline bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
+          value={value.alert_email || ""}
+          onChange={(e) =>
+            set({ alert_email: e.target.value.trim() || null })
+          }
+          placeholder="ops@example.com"
+          autoComplete="email"
+        />
+      </label>
     </div>
   );
 }
@@ -336,6 +352,7 @@ export function LiveMonitoringClient() {
       const body = {
         ...createForm,
         webhook_url: createForm.webhook_url || null,
+        alert_email: createForm.alert_email || null,
       };
       const r = await postMonitoredEndpoint(body);
       if (!r.ok) {
@@ -362,6 +379,7 @@ export function LiveMonitoringClient() {
       const r = await patchMonitoredEndpoint(editingId, {
         ...editForm,
         webhook_url: editForm.webhook_url || null,
+        alert_email: editForm.alert_email || null,
       });
       if (!r.ok) {
         const t = await r.text();
@@ -466,12 +484,13 @@ export function LiveMonitoringClient() {
                 Existing endpoints
               </h3>
               <div className="overflow-x-auto rounded border border-avline/80">
-                <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+                <table className="w-full min-w-[800px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-avline text-xs uppercase text-slate-500">
                       <th className="px-2 py-2">Name</th>
                       <th className="px-2 py-2">URL</th>
                       <th className="px-2 py-2">Method</th>
+                      <th className="px-2 py-2">Alert email</th>
                       <th className="px-2 py-2 w-28">Actions</th>
                     </tr>
                   </thead>
@@ -486,6 +505,12 @@ export function LiveMonitoringClient() {
                           {e.url}
                         </td>
                         <td className="px-2 py-2 text-slate-400">{e.method}</td>
+                        <td
+                          className="max-w-[10rem] truncate px-2 py-2 text-xs text-slate-500"
+                          title={e.alert_email || "— (default in backend config)"}
+                        >
+                          {e.alert_email || "— default"}
+                        </td>
                         <td className="px-2 py-2">
                           <div className="flex flex-wrap gap-1">
                             <button

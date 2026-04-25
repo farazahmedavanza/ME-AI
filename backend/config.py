@@ -54,6 +54,21 @@ class Settings(BaseModel):
         / "live_monitor_snapshot.json"
     )
 
+    # Live monitor: optional per-endpoint `alert_email`; if blank, this address is used
+    default_monitor_alert_email: str = "meaiavanzahackathon@gmail.com"
+    # SMTP (e.g. Gmail: create an app password for the sender account)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+
+    # When SMTP is unavailable: Resend (HTTPS) and/or public FormSubmit relay (HTTPS)
+    resend_api_key: str = ""
+    resend_from: str = "onboarding@resend.dev"
+    # POST to formsubmit.co/ajax/{recipient} — no key; may require one-time email activation per inbox
+    formsubmit_fallback: bool = True
+
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     class Config:
@@ -100,6 +115,17 @@ def get_settings() -> Settings:
         "LIVE_MONITOR_SNAPSHOT_PATH",
         Path(__file__).resolve().parent / "data" / "live_monitor_snapshot.json",
     )
+    d["default_monitor_alert_email"] = (
+        os.getenv("DEFAULT_MONITOR_ALERT_EMAIL", "meaiavanzahackathon@gmail.com") or ""
+    ).strip()
+    d["smtp_host"] = (os.getenv("SMTP_HOST", "") or "").strip()
+    d["smtp_port"] = int(os.getenv("SMTP_PORT", "587") or 587)
+    d["smtp_user"] = (os.getenv("SMTP_USER", "") or "").strip()
+    d["smtp_password"] = (os.getenv("SMTP_PASSWORD", "") or "").strip()
+    d["smtp_from"] = (os.getenv("SMTP_FROM", "") or "").strip()
+    d["resend_api_key"] = (os.getenv("RESEND_API_KEY", "") or "").strip()
+    d["resend_from"] = (os.getenv("RESEND_FROM", "onboarding@resend.dev") or "").strip()
+    d["formsubmit_fallback"] = _b("USE_FORM_SUBMIT_EMAIL_FALLBACK", True)
     return Settings.model_validate(d)
 
 

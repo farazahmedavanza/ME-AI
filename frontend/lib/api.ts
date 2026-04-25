@@ -140,6 +140,8 @@ export type MonitoredEndpointView = {
   expected_status_max?: number;
   timeout_ms?: number;
   webhook_url?: string | null;
+  /** Per-endpoint; if empty, backend uses DEFAULT_MONITOR_ALERT_EMAIL */
+  alert_email?: string | null;
   last_check: {
     ok: boolean;
     status_code: number | null;
@@ -272,6 +274,7 @@ export type MonitorEndpointWriteBody = {
   sla_min_uptime_pct?: number;
   failure_threshold?: number;
   webhook_url?: string | null;
+  alert_email?: string | null;
 };
 
 export async function postMonitoredEndpoint(body: MonitorEndpointWriteBody) {

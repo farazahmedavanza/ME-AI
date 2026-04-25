@@ -1,16 +1,19 @@
 """Run HTTP checks, persist state/history, emit monitor alerts. Used by /api/endpoint-monitors."""
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from typing import Any
 
 import httpx
 
+from config import get_settings
 from endpoint_monitor import (
     compute_uptime_pct,
     run_http_check,
     window_start_24h,
 )
+from monitor_alert_email import resolve_alert_recipient, send_sla_downtime_email
 
 
 def _i_ok(v: Any) -> int:
@@ -74,6 +77,7 @@ async def run_endpoint_monitors(
                         "expected_status_min": int(ep.get("expected_status_min") or 200),
                         "expected_status_max": int(ep.get("expected_status_max") or 299),
                         "timeout_ms": int(ep.get("timeout_ms") or 10_000),
+                        "alert_email": ep.get("alert_email"),
                         "webhook_url": ep.get("webhook_url"),
                         "last_check": None,
                         "consecutive_failures": int(
@@ -164,6 +168,22 @@ async def run_endpoint_monitors(
                             "consecutive",
                         )
 
+            if not result_ok and cfail == fail_thr:
+                settings = get_settings()
+                to_addr = resolve_alert_recipient(ep, settings)
+                err_v = chk.get("error")
+                err_out: str | None = None if err_v in (None, "") else str(err_v)
+                await asyncio.to_thread(
+                    send_sla_downtime_email,
+                    to_addr,
+                    endpoint_name=str(ep.get("name") or eid),
+                    url=u,
+                    status_code=chk.get("status_code"),
+                    error=err_out,
+                    failure_threshold=fail_thr,
+                    consecutive_failures=cfail,
+                )
+
             hist = st.history_for_uptime(user_id, eid, since_24h)
             up_pct = compute_uptime_pct(
                 [
@@ -201,6 +221,7 @@ async def run_endpoint_monitors(
                     "expected_status_min": ex_min,
                     "expected_status_max": ex_max,
                     "timeout_ms": to_ms,
+                    "alert_email": ep.get("alert_email"),
                     "webhook_url": ep.get("webhook_url"),
                     "last_check": chk,
                     "consecutive_failures": cfail,
@@ -252,6 +273,7 @@ def snapshot_endpoint_monitors(st: Any, user_id: str) -> dict[str, Any]:
                     "expected_status_min": int(ep.get("expected_status_min") or 200),
                     "expected_status_max": int(ep.get("expected_status_max") or 299),
                     "timeout_ms": int(ep.get("timeout_ms") or 10_000),
+                    "alert_email": ep.get("alert_email"),
                     "webhook_url": ep.get("webhook_url"),
                     "last_check": None,
                     "consecutive_failures": int(st_row.get("consecutive_failures") or 0),
@@ -320,6 +342,7 @@ def snapshot_endpoint_monitors(st: Any, user_id: str) -> dict[str, Any]:
                 "expected_status_min": int(ep.get("expected_status_min") or 200),
                 "expected_status_max": int(ep.get("expected_status_max") or 299),
                 "timeout_ms": int(ep.get("timeout_ms") or 10_000),
+                "alert_email": ep.get("alert_email"),
                 "webhook_url": ep.get("webhook_url"),
                 "last_check": lc,
                 "consecutive_failures": cfail,

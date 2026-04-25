@@ -363,6 +363,7 @@ class MonitorEndpointPatch(BaseModel):
     sla_min_uptime_pct: float | None = None
     failure_threshold: int | None = None
     webhook_url: str | None = None
+    alert_email: str | None = None
 
 
 class MonitorEndpointCreate(BaseModel):
@@ -377,6 +378,7 @@ class MonitorEndpointCreate(BaseModel):
     sla_min_uptime_pct: float = 99.0
     failure_threshold: int = 2
     webhook_url: str | None = None
+    alert_email: str | None = None
 
 
 class MonitorAlertPatch(BaseModel):
@@ -444,6 +446,7 @@ def create_monitored_endpoint(
         "sla_min_uptime_pct": body.sla_min_uptime_pct,
         "failure_threshold": body.failure_threshold,
         "webhook_url": body.webhook_url,
+        "alert_email": (body.alert_email or "").strip() or None,
     }
     eid = st.insert_monitored_endpoint(user_id, fields)
     return {"ok": True, "id": eid}
@@ -476,6 +479,8 @@ def patch_monitored_endpoint(
     if "enabled" in fields and fields["enabled"] is not None:
         e = fields["enabled"]
         fields["enabled"] = 1 if (e is True or e == 1) else 0
+    if "alert_email" in fields and fields["alert_email"] is not None:
+        fields["alert_email"] = (str(fields["alert_email"])).strip() or None
     ok = st.update_monitored_endpoint(user_id, endpoint_id, fields)
     if not ok:
         raise HTTPException(404, "Endpoint not found")

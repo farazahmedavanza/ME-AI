@@ -272,6 +272,7 @@ class SupabaseStore:
                 "sla_min_uptime_pct": float(fields.get("sla_min_uptime_pct", 99.0)),
                 "failure_threshold": int(fields.get("failure_threshold", 2)),
                 "webhook_url": fields.get("webhook_url"),
+                "alert_email": fields.get("alert_email"),
             }
         ).execute()
         return eid
@@ -320,6 +321,7 @@ class SupabaseStore:
                     "sla_min_uptime_pct": float(spec.get("sla_min_uptime_pct", 99.0)),
                     "failure_threshold": int(spec.get("failure_threshold", 2)),
                     "webhook_url": spec.get("webhook_url"),
+                    "alert_email": spec.get("alert_email"),
                 }
             ).execute()
 
@@ -329,7 +331,7 @@ class SupabaseStore:
             self._client.table("monitored_endpoints")
             .select(
                 "id, name, url, method, expected_status_min, expected_status_max, "
-                "timeout_ms, enabled, sla_max_latency_ms, sla_min_uptime_pct, failure_threshold, webhook_url"
+                "timeout_ms, enabled, sla_max_latency_ms, sla_min_uptime_pct, failure_threshold, webhook_url, alert_email"
             )
             .eq("user_id", user_id)
             .order("name", desc=False)
@@ -352,6 +354,7 @@ class SupabaseStore:
             "sla_min_uptime_pct",
             "failure_threshold",
             "webhook_url",
+            "alert_email",
         }
         payload = {k: v for k, v in fields.items() if k in allowed}
         if "enabled" in payload and payload["enabled"] is not None:

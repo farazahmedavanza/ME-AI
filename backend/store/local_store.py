@@ -90,7 +90,8 @@ CREATE TABLE IF NOT EXISTS monitored_endpoints (
   sla_max_latency_ms INTEGER DEFAULT 3000,
   sla_min_uptime_pct REAL DEFAULT 99.0,
   failure_threshold INTEGER DEFAULT 2,
-  webhook_url TEXT
+  webhook_url TEXT,
+  alert_email TEXT
 );
 CREATE TABLE IF NOT EXISTS endpoint_check_history (
   id TEXT PRIMARY KEY,
@@ -156,6 +157,12 @@ class LocalStore:
             c = self._connect()
             try:
                 c.executescript(SCHEMA)
+                try:
+                    c.execute(
+                        "ALTER TABLE monitored_endpoints ADD COLUMN alert_email TEXT"
+                    )
+                except sqlite3.OperationalError:
+                    pass
                 for uid, em, ph in LOCAL_DEMO_ACCOUNTS:
                     c.execute(
                         """
@@ -442,7 +449,7 @@ class LocalStore:
                     c.execute(
                         "INSERT INTO monitored_endpoints (id, user_id, name, url, method, expected_status_min, "
                         "expected_status_max, timeout_ms, enabled, sla_max_latency_ms, sla_min_uptime_pct, "
-                        "failure_threshold, webhook_url) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                        "failure_threshold, webhook_url, alert_email) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                         (
                             eid,
                             user_id,
@@ -457,6 +464,7 @@ class LocalStore:
                             float(spec.get("sla_min_uptime_pct", 99.0)),
                             int(spec.get("failure_threshold", 2)),
                             spec.get("webhook_url"),
+                            spec.get("alert_email"),
                         ),
                     )
                 c.commit()
@@ -483,8 +491,8 @@ class LocalStore:
                 c.execute(
                     "INSERT INTO monitored_endpoints (id, user_id, name, url, method, "
                     "expected_status_min, expected_status_max, timeout_ms, enabled, "
-                    "sla_max_latency_ms, sla_min_uptime_pct, failure_threshold, webhook_url) "
-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    "sla_max_latency_ms, sla_min_uptime_pct, failure_threshold, webhook_url, alert_email) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (
                         eid,
                         user_id,
@@ -499,6 +507,7 @@ class LocalStore:
                         float(fields.get("sla_min_uptime_pct", 99.0)),
                         int(fields.get("failure_threshold", 2)),
                         fields.get("webhook_url"),
+                        fields.get("alert_email"),
                     ),
                 )
                 c.commit()
@@ -543,7 +552,7 @@ class LocalStore:
         try:
             cur = c.execute(
                 "SELECT id, name, url, method, expected_status_min, expected_status_max, timeout_ms, "
-                "enabled, sla_max_latency_ms, sla_min_uptime_pct, failure_threshold, webhook_url "
+                "enabled, sla_max_latency_ms, sla_min_uptime_pct, failure_threshold, webhook_url, alert_email "
                 "FROM monitored_endpoints WHERE user_id = ? ORDER BY name",
                 (user_id,),
             )
@@ -568,6 +577,7 @@ class LocalStore:
             "sla_min_uptime_pct",
             "failure_threshold",
             "webhook_url",
+            "alert_email",
         }
         sets: list[str] = []
         vals: list[Any] = []
